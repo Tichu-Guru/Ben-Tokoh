@@ -72,7 +72,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v75</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v78</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -1116,10 +1116,21 @@ try{ render(); }catch(e){ console.error('client deferred render error:', e); }
 netApplyUI(ui);
 }
 document.addEventListener('pointerdown', e => {
-if (NET.mode==='join' && NET.inGame && e.target.closest('#player-zone')) NET._interacting = true;
+if (NET.mode==='join' && NET.inGame && e.target.closest('#player-zone')) {
+NET._interacting = true;
+clearTimeout(NET._interactingTimeout);
+// Safety net: iOS Safari can occasionally fail to fire pointerup/pointercancel
+// (an interrupted touch — notification banner, Control Center gesture, etc.).
+// If that happens, don't let the client freeze forever — force-release and
+// flush whatever snapshot arrived while we were waiting.
+NET._interactingTimeout = setTimeout(() => {
+NET._interacting = false;
+netFlushPendingRender();
+}, 3000);
+}
 }, true);
-document.addEventListener('pointerup', () => { NET._interacting = false; netFlushPendingRender(); }, true);
-document.addEventListener('pointercancel', () => { NET._interacting = false; netFlushPendingRender(); }, true);
+document.addEventListener('pointerup', () => { NET._interacting = false; clearTimeout(NET._interactingTimeout); netFlushPendingRender(); }, true);
+document.addEventListener('pointercancel', () => { NET._interacting = false; clearTimeout(NET._interactingTimeout); netFlushPendingRender(); }, true);
 const netEsc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function netRoomCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ'; let c=''; for(let i=0;i<4;i++) c+=A[Math.floor(Math.random()*A.length)]; return c; }
 function netStatus(elId, msg, cls){ const el=document.getElementById(elId); if(!el) return; el.textContent=msg; el.className='net-status'+(cls?' '+cls:''); }
@@ -5101,9 +5112,9 @@ glog(`Balance: condition not met (gap ${winnerVP - holderVP}↑) — card return
 }
 G.suitBonus.forEach(sb=>{
 if (cards.some(c=>c.suit===sb.suit)) {
-G.arrowVP[sb.seat]=(G.arrowVP[sb.seat]||0)+10;
-G.vp[sb.seat]=(G.vp[sb.seat]||0)+10;
-glog(`${SEAT_NAME_HTML(sb.seat)} ${sb.suit} bonus: +10↑.`,'good');
+G.arrowVP[winner]=(G.arrowVP[winner]||0)+10;
+G.vp[winner]=(G.vp[winner]||0)+10;
+glog(`${SEAT_NAME_HTML(winner)} ${sb.suit} bonus (${sb.suit} activated by ${SEAT_NAME(sb.seat)}): +10↑.`,'good');
 }
 });
 if (G.cosmosSeat!==null) {
@@ -7326,15 +7337,50 @@ case 'suitbonus': {
 if (!G.activeSuits?.includes(ma.suit)) break;
 const currRankSB = G.currentSet ? (G.currentSet.topRank||G.currentSet.rank||0) : 0;
 const suitAlreadyInTrick = (G.trickCards||[]).some(tc => !tc.card.isJoker && tc.card.suit === ma.suit);
-const suitPlayCard = hand.find(c => {
+if (suitAlreadyInTrick) {
+// Suit is already present — activate if self OR a teammate is currently winning.
+// Arrow VP pools to the whole team, so a teammate winning is just as good.
+if (G.trickWinner !== null && (G.trickWinner === seat || myTeam.includes(G.trickWinner))) {
+G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
+discardMA(card, seat);
+G.suitBonus.push({suit:ma.suit, seat});
+G.trickMASeats?.add(seat);
+glog(`${SEAT_NAME_HTML(seat)} activates ${ma.id} — ${ma.suit} already in trick, ${G.trickWinner===seat?'holding the lead':'teammate holding the lead'}.`,'imp');
+return;
+}
+break;
+}
+// Suit not yet in trick — only activate alongside a Naga or bomb play of that suit,
+// since those are the clearest signals the AI is actually about to win this trick.
+const candidate = hand.find(c => {
 if (c.isJoker || c.suit !== ma.suit) return false;
-if (isLead) return true;
-const s = validateSet([c], currRankSB);
-return s && canFollow(s, G.currentSet);
+if (c.role === ROLES.Naga) return true;
+return false;
 });
-const willPlaySuit = !!suitPlayCard;
-const suitInTrickAndWinning = diff === 'hard' && suitAlreadyInTrick && G.trickWinner === seat;
-if (willPlaySuit || suitInTrickAndWinning) activate = true;
+const bombCandidate = !candidate ? findAllBombs(hand).find(b =>
+b.cards.some(c => !c.isJoker && c.suit === ma.suit) &&
+(isLead || canFollow(b, G.currentSet))
+) : null;
+if (candidate) {
+const s = validateSet([candidate], currRankSB);
+if (s && (isLead || canFollow(s, G.currentSet))) {
+G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
+discardMA(card, seat);
+G.suitBonus.push({suit:ma.suit, seat});
+G.trickMASeats?.add(seat);
+glog(`${SEAT_NAME_HTML(seat)} activates ${ma.id} — about to play the Naga.`,'imp');
+playCards(seat, [candidate], s);
+return;
+}
+} else if (bombCandidate) {
+G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
+discardMA(card, seat);
+G.suitBonus.push({suit:ma.suit, seat});
+G.trickMASeats?.add(seat);
+glog(`${SEAT_NAME_HTML(seat)} activates ${ma.id} — about to bomb with ${ma.suit}.`,'imp');
+playCards(seat, bombCandidate.cards, bombCandidate);
+return;
+}
 break;
 }
 case 'cosmos':
@@ -7370,11 +7416,10 @@ break;
 case 'sage':
 if (diff === 'easy') break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
-if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 {
 const playedNatRanks = (G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank);
 const maxPlayed = playedNatRanks.length ? Math.max(...playedNatRanks) : 0;
-if (maxPlayed > 10) break;
+if (maxPlayed > 8) break;
 const currRank = G.currentSet ? (G.currentSet.topRank||G.currentSet.rank||0) : 0;
 const targetCard = [8,9,10].reduce((found, r) => {
 if (found) return found;
@@ -7396,11 +7441,10 @@ break;
 case 'strength':
 if (diff === 'easy') break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
-if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 {
 const playedNatRanks = (G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank);
 const maxPlayed = playedNatRanks.length ? Math.max(...playedNatRanks) : 0;
-if (maxPlayed > 7) break;
+if (maxPlayed > 5) break;
 const currRank = G.currentSet ? (G.currentSet.topRank||G.currentSet.rank||0) : 0;
 const targetCard = [5,6,7].reduce((found, r) => {
 if (found) return found;
@@ -7435,7 +7479,6 @@ case 'tower':
 if (diff === 'easy') break;
 if (G.towerOn) break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
-if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 {
 const playedNatRanks = (G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank);
 const maxPlayed = playedNatRanks.length ? Math.max(...playedNatRanks) : 0;
@@ -7528,20 +7571,16 @@ if (ma.fx === 'sage' || ma.fx === 'strength' || ma.fx === 'tower') {
 if (G.currentSet && G.currentSet.type !== 'Single') {
 glog(`${ma.id} can only be activated in a singleton trick.`, 'bad'); return;
 }
-const alreadyPlayed = (G.trickCards||[]).some(tc => tc.seat === seat);
-if (alreadyPlayed) {
-glog(`${ma.id} must be activated before playing any card this trick.`, 'bad'); return;
-}
 const playedNatRanks = (G.trickCards||[])
 .map(tc => tc.card)
 .filter(c => !c.isJoker && !c.isMajorArcana)
 .map(c => c.rank);
 const maxPlayedRank = playedNatRanks.length ? Math.max(...playedNatRanks) : 0;
-if (ma.fx === 'strength' && maxPlayedRank > 7) {
-glog(`Strength cannot be activated — a rank above 7 is already in this trick.`, 'bad'); return;
+if (ma.fx === 'strength' && maxPlayedRank > 5) {
+glog(`Strength cannot be activated — a rank above 5 is already in this trick.`, 'bad'); return;
 }
-if (ma.fx === 'sage' && maxPlayedRank > 10) {
-glog(`Sage cannot be activated — a rank above 10 is already in this trick.`, 'bad'); return;
+if (ma.fx === 'sage' && maxPlayedRank > 8) {
+glog(`Sage cannot be activated — a rank above 8 is already in this trick.`, 'bad'); return;
 }
 if (ma.fx === 'tower' && maxPlayedRank >= 12) {
 glog(`Tower cannot be activated — a Kn/Q/K is already in this trick.`, 'bad'); return;
@@ -8272,19 +8311,17 @@ break;
 case 'sage': {
 if (!inTrick) break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
-if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 if (G.sageRanks?.size || G.strengthRanks?.size) break;
 const maxSage = Math.max(0,...(G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank));
-if (maxSage <= 10) hint = 'Elevate ranks 8/9/10 this trick (+4 each)';
+if (maxSage <= 8) hint = 'Elevate ranks 8/9/10 this trick (+4 each)';
 break;
 }
 case 'strength': {
 if (!inTrick) break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
-if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 if (G.sageRanks?.size || G.strengthRanks?.size) break;
 const maxStr = Math.max(0,...(G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank));
-if (maxStr <= 7) hint = 'Elevate ranks 5/6/7 this trick (+7 each)';
+if (maxStr <= 5) hint = 'Elevate ranks 5/6/7 this trick (+7 each)';
 break;
 }
 case 'hangman': {
@@ -8306,7 +8343,6 @@ break;
 case 'tower': {
 if (!inTrick || G.towerOn) break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
-if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 const maxTow = Math.max(0,...(G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank));
 if (maxTow < 12) hint = 'Court cards (Kn/Q/K) lose 7 ranks this trick';
 break;
