@@ -64,6 +64,12 @@ body.net-client #gd-proceed{display:none !important;}
 body.net-client .end-play-again,body.net-client .emergence-continue-btn,body.net-client .lb-btn{display:none !important;}
 #net-spectate-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:1090;font-family:'Rajdhani',sans-serif;font-size:0.72rem;font-weight:800;color:var(--gold3);background:rgba(232,230,237,0.95);border-top:1px solid var(--gold-rim);text-align:center;padding:4px 8px;letter-spacing:0.06em;}
 body.net-client #net-spectate-banner{display:block;}
+/* Non-host clients: net-spectate-banner is fixed at the viewport bottom with a
+   high z-index and sits on top of #pass-overlay's Confirm button, which has no
+   reserved clearance for it. Reserve extra bottom padding on the overlay so the
+   button is never hidden underneath the banner. Host-only games are unaffected
+   since body.net-client is never set there. */
+body.net-client #pass-overlay{padding-bottom:44px;}
 body.net-client #net-stuck-btn{display:block;}
 .net-move-btn{border:1px solid var(--border);background:var(--surface);border-radius:4px;font-size:0.72rem;font-weight:800;color:var(--text2);padding:2px 7px;cursor:pointer;flex-shrink:0;}
 .net-move-btn:disabled{opacity:0.3;cursor:default;}</style>
@@ -73,7 +79,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v104</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v106</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -6507,6 +6513,27 @@ return { cards: [shaveCard], set: shaveSet, topRank: shaveCard.rank, isSingle: t
 const strategicLowSingles    = aiStrategicLeadFilter(seat, effectiveLowSingles, diff, hand);
 const strategicLowNonSingles = aiStrategicLeadFilter(seat, lowNonSingles, diff, hand);
 const strategicHighAll       = aiStrategicLeadFilter(seat, highAll, diff, hand);
+// 3P: non-declaring AI supports a teammate's doable GC/C declaration. Runs at
+// Medium and Hard (was Hard-only), and keeps protecting the go-out slot for as
+// long as the declaration remains doable — not just in the window before anyone
+// has gone out (was G.outOrder.length === 0, which stopped applying the moment
+// any seat, including this AI's own opponent, went out).
+if (diff !== 'easy' && nats.length > 0) {
+const myTeamGCC = G.team1.includes(seat)?G.team1:G.team2.includes(seat)?G.team2:G.teamGreen?.includes(seat)?G.teamGreen:[];
+const activePartnersGCC = myTeamGCC.filter(s=>s!==seat&&!G.outOrder.includes(s));
+const declPGCC = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
+const aiDeclPGCC = declPGCC(seat);
+const teammateGCCLead = G.nPlayers === 3 &&
+activePartnersGCC.some(s => declPGCC(s) > aiDeclPGCC && isDeclDoable(s) &&
+(G.decl[s] === 'grandCukong' || G.decl[s] === 'cukong'));
+if (teammateGCCLead) {
+// Support GC/C teammate — play conservatively, avoid going out
+const safePlay = [...strategicLowSingles, ...strategicLowNonSingles].filter(c =>
+gcFilter(c) && hand.length > c.cards.length
+);
+if (safePlay.length) { playCards(seat, safePlay[0].cards, safePlay[0].set); return; }
+}
+}
 if (diff === 'hard' && nats.length > 0) {
 const myTeam = G.team1.includes(seat)?G.team1:G.team2.includes(seat)?G.team2:G.teamGreen?.includes(seat)?G.teamGreen:[];
 const activePartners = myTeam.filter(s=>s!==seat&&!G.outOrder.includes(s));
@@ -6519,19 +6546,6 @@ activeSeatsLead.every(s => myTeam.includes(s));
 const raceTeammateHasGTLead = soloRaceModeLead && activePartners.some(s =>
 G.decl[s] === 'grandTichu' || G.decl[s] === 'tichu'
 );
-// 3P: non-declaring AI supports GC/C teammate from start (only 1 out slot left)
-const declP = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
-const aiDeclPLead = declP(seat);
-const teammateGCCLead = G.nPlayers === 3 && G.outOrder.length === 0 &&
-activePartners.some(s => declP(s) > aiDeclPLead &&
-(G.decl[s] === 'grandCukong' || G.decl[s] === 'cukong'));
-if (teammateGCCLead) {
-// Support GC/C teammate — play conservatively, avoid going out
-const safePlay = [...strategicLowSingles, ...strategicLowNonSingles].filter(c =>
-gcFilter(c) && hand.length > c.cards.length
-);
-if (safePlay.length) { playCards(seat, safePlay[0].cards, safePlay[0].set); return; }
-}
 if (soloRaceModeLead && !raceTeammateHasGTLead) {
 const fastest = [...strategicLowSingles, ...strategicLowNonSingles, ...strategicHighAll].filter(gcFilter);
 if (fastest.length) { playCards(seat, fastest[0].cards, fastest[0].set); return; }
