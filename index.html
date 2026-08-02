@@ -79,7 +79,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v106</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v110</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -2417,22 +2417,20 @@ return tied[Math.floor(Math.random()*tied.length)].s;
 function countCoreCards(hand) {
 const hasNaga  = hand.some(c => c.role === ROLES.Naga);
 const hasGaruda = hand.some(c => c.role === ROLES.Garuda);
-const kingCount  = hand.filter(c => !c.isJoker && c.rank === 13).length;
+const kingCount  = hand.filter(c => !c.isJoker && c.rank === 14).length;
 const bombCount  = findAllBombs(hand).length;
 return (hasNaga?1:0) + (hasGaruda?1:0) + Math.min(kingCount,2) + Math.min(bombCount,2);
 }
-function meetsGTCriteria(hand) {
-const hasNaga  = hand.some(c => c.role === ROLES.Naga);
+function meetsTokohCriteria(hand) {
+const hasNaga   = hand.some(c => c.role === ROLES.Naga);
 const hasGaruda = hand.some(c => c.role === ROLES.Garuda);
-const kingCount  = hand.filter(c => !c.isJoker && c.rank === 14).length;
-const hasBomb    = findAllBombs(hand).length > 0;
-const minKings   = G.nPlayers >= 5 ? 3 : 2;
-if (hasNaga && hasGaruda && kingCount >= minKings) return true;
-if (!hasBomb) return false;
-if (hasNaga && hasGaruda && kingCount >= minKings - 1) return true;
-if (hasNaga && kingCount >= minKings) return true;
-if (hasGaruda && kingCount >= minKings) return true;
-return false;
+const kingCount = hand.filter(c => !c.isJoker && c.rank === 14).length;
+const bombCount = findAllBombs(hand).length;
+const kingBaseline = G.nPlayers >= 5 ? 3 : 2;
+const kingGap = Math.max(0, kingBaseline - kingCount);
+if (kingGap > 1) return false; // at most 1 missing King can be substituted for
+const pool = (hasNaga?1:0) + (hasGaruda?1:0) + bombCount; // Naga/Garuda/each Bomb, any can fill either role
+return pool >= kingGap + 1; // 1 to substitute the missing King (if any) + 1 mandatory qualifier
 }
 function hasMelds(hand) {
 const nats = hand.filter(c => !c.isJoker);
@@ -2447,15 +2445,15 @@ else run = 1;
 }
 return false;
 }
-function evaluateGrandHand(hand8, seat) {
-if (!hand8 || !hand8.length) return null;
+function evaluateGrandHand(initialPartialHand, seat) {
+if (!initialPartialHand || !initialPartialHand.length) return null;
 // Declaration criteria are based purely on hand strength and apply the same way
 // across all difficulties — only Hard additionally considers other players' state
 // (e.g. cutthroat VP threshold below). Easy/Medium judge their own hand only.
-const core  = countCoreCards(hand8);
-const melds = hasMelds(hand8);
+const core  = countCoreCards(initialPartialHand);
+const melds = hasMelds(initialPartialHand);
 if (!melds) return null;
-if (meetsGTCriteria(hand8)) return 'grandTichu';
+if (meetsTokohCriteria(initialPartialHand)) return 'grandTichu';
 if (core >= 2 && G.nPlayers !== 2) {
 const myTeam = G.team1?.includes(seat)?G.team1:G.team2?.includes(seat)?G.team2:G.teamGreen?.includes(seat)?G.teamGreen:[];
 const teamGCCount = myTeam.filter(s => s !== seat &&
@@ -2465,8 +2463,8 @@ if (teamGCCount < myTeam.length - 1 || cutthroat) return 'grandCukong';
 }
 return null;
 }
-function aiShouldCallGrand(hand8, seat) {
-return evaluateGrandHand(hand8, seat);
+function aiShouldCallGrand(initialPartialHand, seat) {
+return evaluateGrandHand(initialPartialHand, seat);
 }
 function gdCallGrandCukong(s, which) {
 if (NET.mode==='join' && NET.inGame){ netSendGd('grandCukong', which); return; }
@@ -4174,7 +4172,7 @@ if (!hand.length) return null;
 const core  = countCoreCards(hand);
 const melds = hasMelds(hand);
 if (!melds) return null;
-if (meetsGTCriteria(hand)) return 'tichu';
+if (meetsTokohCriteria(hand)) return 'tichu';
 if (core >= 2 && G.nPlayers !== 2) return 'cukong';
 return null;
 }
@@ -4341,6 +4339,7 @@ return;
 }
 if (G.foolActive && G.foolSeat === seat) {
 if (sel.length !== 1) { glog('Fool Mode 2 requires exactly one card.', 'bad'); return; }
+if (sel[0].role) { glog('Fool Mode 2: Jokers keep their own powers and cannot be played this way.', 'bad'); return; }
 const foolSet = validateSet(sel, 0);
 if (!foolSet || foolSet.type !== 'Single') { glog('Fool Mode 2: must play a singleton.', 'bad'); return; }
 const currWinRank = G.currentSet ? (G.currentSet.topRank || G.currentSet.rank || 0) : 0;
@@ -5760,7 +5759,7 @@ const lastSet = validateSet([lastCard], G.currentSet.rank||0);
 const canPlayNormally = lastSet && canFollow(lastSet, G.currentSet);
 if (!canPlayNormally) {
 const foolSet = validateSet([lastCard], 0);
-if (foolSet && foolSet.type === 'Single') {
+if (foolSet && foolSet.type === 'Single' && !lastCard.role) {
 G.vp[seat] -= 5;
 G.foolPlayedCardIds.add(lastCard.id);
 G.foolPlayedThisTrick = true;
@@ -7761,17 +7760,22 @@ cancelMA(); return;
 }
 const isLead = G.trickLeader === seat && !G.trickCards.length;
 if (isLead) {
+// Mode 2 ("play ≤ current winning rank") is only coherent when responding to
+// an existing set. While leading there is no current set, so Mode 2 could
+// only ever be completed with a rank-0 card — a Joker — which is now
+// disallowed. Offering it here would let a player pay the 5★ cost and
+// activate Fool with no legal card left to finish the play. Leader gets
+// Mode 1 only.
 showChoice('Fool',
-'Mode 1: Pass the lead to any player.\nMode 2: −5★, play any singleton ≤ current winning rank — treated as a pass.',
-[{label:'Mode 1 — Pass Lead', value:'m1'}, {label:'Mode 2 — Illegal Singleton (−5★)', value:'m2'},
+'Pass the lead to any player.',
+[{label:'Pass Lead', value:'m1'},
 {label:'Cancel — Keep Fool', value:'cancel'}],
 v => {
 if (v === 'cancel') { cancelMA(); return; }
 consumeMA();
-if (v === 'm1') {
 const targets = allSeats().filter(s => s !== seat && !G.outOrder.includes(s));
 G.foolPlayedThisTrick = true;
-glog('Fool Mode 1: tap any seat token to pass the lead.', 'imp');
+glog('Fool: tap any seat token to pass the lead.', 'imp');
 enterLeadPassMode('fool', targets, t => {
 let leadSeat = t;
 if (G.outOrder.includes(leadSeat)) {
@@ -7787,13 +7791,6 @@ render(); updateActions();
 if (!isHuman(leadSeat)) setTimeout(() => aiTakeTurn(leadSeat), aiDelay());
 else handoffToHuman(leadSeat, () => { render(); updateActions(); });
 });
-} else {
-G.vp[seat] -= 5;
-G.foolActive = true; G.foolSeat = seat;
-G.foolPlayedThisTrick = true;
-glog('Fool Mode 2: −5★. Play any singleton ≤ current winning rank — treated as a pass.', 'imp');
-render(); updateActions();
-}
 }
 );
 } else {
