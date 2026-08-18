@@ -79,7 +79,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v123</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v150</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -166,7 +166,7 @@ body.net-client #net-stuck-btn{display:block;}
         background:var(--bg2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:1rem;text-align:center;"
         oninput="setAltVP(this.value)"/>
       <span id="alt-vp-hint" style="display:none;font-size:0.78rem;color:var(--text2);font-style:italic;">
-        Default: 1000▲ · Hard cutthroat at 75%
+        Default: 1000▲︎ · Hard cutthroat at 75%
       </span>
     </div>
   </div>
@@ -175,7 +175,7 @@ body.net-client #net-stuck-btn{display:block;}
     <div class="start-label">Deck</div>
     <div class="toggle-row">
       <button class="toggle-btn" id="dup-on-btn" onclick="setDuplicates(true)"
-        title="Adds duplicate ranks per suit: +2 Aces (rank 1), +2 Fours (rank 4), +1 Eight (rank 8) — 20 cards/suit, 10+10 deal">
+        title="Adds duplicate ranks per suit: +2 Fives (rank 5), +2 Eights (rank 8), +1 Page (rank 11) — 20 cards/suit, 10+10 deal">
         ✦ With Duplicates
       </button>
       <button class="toggle-btn active-ma" id="dup-off-btn" onclick="setDuplicates(false)">
@@ -457,17 +457,17 @@ body.net-client #net-stuck-btn{display:block;}
 <script>'use strict';
 const ROMAN = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI'];
 const SUITS_ALL = ['Hearts','Spades','Clubs','Diamonds','Moon','Sun'];
-const SUIT_ICON = { Hearts:'♥', Spades:'♠', Clubs:'♣', Diamonds:'♦', Moon:'☽', Sun:'☼' };
+const SUIT_ICON = { Hearts:'♥︎', Spades:'♠︎', Clubs:'♣︎', Diamonds:'♦︎', Moon:'☽︎', Sun:'☼︎' };
 const SUIT_COLOR = { Hearts:'hearts', Spades:'spades', Clubs:'clubs', Diamonds:'diamonds', Moon:'moon', Sun:'sun' };
 const RANK_NAME = { 0:'Mu',1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'Pg',12:'Kn',13:'Q',14:'K' };
 const ROLES = { Naga:'Naga', Garuda:'Garuda', Mulai:'Mulai', Anjing:'Anjing' };
 const MA_POOL = [
 {id:'Fool',     n:0,  t:'DuringTrick', fx:'fool',
 d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5★, play any illegal singleton into this trick. Cannot win.'},
-{id:'Magus',    n:1,  t:'DuringTrick', fx:'suitbonus', suit:'Clubs', d:'At Trick End: If Clubs in trick, trick winner gains 10▲.'},
-{id:'Priestess',n:2,  t:'DuringTrick', fx:'suitbonus', suit:'Hearts',   d:'At Trick End: If Hearts in trick, trick winner gains 10▲.'},
-{id:'Empress',  n:3,  t:'DuringTrick', fx:'suitbonus', suit:'Diamonds',  d:'At Trick End: If Diamonds in trick, trick winner gains 10▲.'},
-{id:'Emperor',  n:4,  t:'DuringTrick', fx:'suitbonus', suit:'Spades', d:'At Trick End: If Spades in trick, trick winner gains 10▲.'},
+{id:'Magus',    n:1,  t:'DuringTrick', fx:'suitbonus', suit:'Clubs', d:'At Trick End: If Clubs in trick, trick winner gains 10▲︎.'},
+{id:'Priestess',n:2,  t:'DuringTrick', fx:'suitbonus', suit:'Hearts',   d:'At Trick End: If Hearts in trick, trick winner gains 10▲︎.'},
+{id:'Empress',  n:3,  t:'DuringTrick', fx:'suitbonus', suit:'Diamonds',  d:'At Trick End: If Diamonds in trick, trick winner gains 10▲︎.'},
+{id:'Emperor',  n:4,  t:'DuringTrick', fx:'suitbonus', suit:'Spades', d:'At Trick End: If Spades in trick, trick winner gains 10▲︎.'},
 {id:'Sage',     n:5,  t:'DuringTrick', fx:'sage',      d:'DuringTrick: Choose ONE rank (8, 9, or 10) — that rank gains +4 this trick. Activate before playing your card.'},
 {id:'Lovers',       n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Heterosexual Lovers]'},
 {id:'LoversGM',     n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Gay Male Lovers]'},
@@ -477,17 +477,17 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'Strength', n:8,  t:'DuringTrick', fx:'strength',  d:'DuringTrick: Choose ONE rank (5, 6, or 7) — that rank gains +7 this trick. Activate before playing your card.'},
 {id:'Hermit',   n:9,  t:'PreDeal',     fx:'hermit',    d:'PreDeal: All remaining unaffiliated players (including activator) become Solo. Already-formed teams are preserved.'},
 {id:'Fortune',  n:10, t:'DuringTrick', fx:'fortune',   d:'During your trick turn: rotate all Arcana Tableaux (including Fools) one seat clockwise or counter-clockwise. Takes effect immediately.'},
-{id:'Balance',  n:11, t:'DuringTrick', fx:'balance',   d:'During your trick turn: if the current trick winner has more than 100▲ Total VP above yours, they transfer 100▲ to you. Card stays if condition not met.'},
+{id:'Balance',  n:11, t:'DuringTrick', fx:'balance',   d:'During your trick turn: if the current trick winner has more than 100▲︎ Total VP above yours, they transfer 100▲︎ to you. Card stays if condition not met.'},
 {id:'HangedMan',n:12, t:'DuringTrick', fx:'hangman',   d:'Skip this trick entirely. You lead the next trick regardless of who wins.'},
 {id:'Transfig', n:13, t:'DuringTrick', fx:'transfig',  d:'During your trick turn: swap one card from the current trick winner\'s Arcana Tableau with one card from the Auction Table. Cancel to keep for later this hand.'},
 {id:'Alchemist',n:14, t:'PreDeal',     fx:'alchemist', d:'Before Team Selection: Exchange 1–3 of your Arcana Tableau cards with cards on the Auction Table.'},
 {id:'Tower',    n:16, t:'DuringTrick', fx:'tower',     d:'Court cards (Kn/Q/K) lose 7 ranks for singletons and groups this trick.'},
 {id:'Star',     n:17, t:'DuringTrick', fx:'starma',    d:'DuringTrick: Doubles all ★ Star VP scored from cards played this trick. Only activate when holding an Ace to play immediately after.'},
-{id:'Moon',     n:18, t:'DuringTrick', fx:'suitbonus', suit:'Moon',   d:'At Trick End: If Moon suit in trick, trick winner gains 10▲.'},
-{id:'Sun',      n:19, t:'DuringTrick', fx:'suitbonus', suit:'Sun',    d:'At Trick End: If Sun suit in trick, trick winner gains 10▲.'},
+{id:'Moon',     n:18, t:'DuringTrick', fx:'suitbonus', suit:'Moon',   d:'At Trick End: If Moon suit in trick, trick winner gains 10▲︎.'},
+{id:'Sun',      n:19, t:'DuringTrick', fx:'suitbonus', suit:'Sun',    d:'At Trick End: If Sun suit in trick, trick winner gains 10▲︎.'},
 {id:'Emergence',n:20, t:'DuringTrick', fx:'emergence', d:'DuringTrick: Reveals all players\' hands to the activating player only.'},
-{id:'Cosmos',   n:21, t:'DuringTrick', fx:'cosmos',    d:'Trick winner scores +6▲ per distinct suit in the trick.'},
-{id:'Pan',      n:15, t:'PreDeal',     fx:'pan',       d:'PreDeal: Form Orange Team with any non-lead player. Target receives +25▲. Activator auto-declares GT at 1.5× stakes (success +150▲ / failure −150▲ to whole Orange Team).'},
+{id:'Cosmos',   n:21, t:'DuringTrick', fx:'cosmos',    d:'Trick winner scores +6▲︎ per distinct suit in the trick.'},
+{id:'Pan',      n:15, t:'PreDeal',     fx:'pan',       d:'PreDeal: Form Orange Team with any non-lead player. Target receives +25 VP. Activator auto-declares GT at 1.5× stakes (success +150 VP / failure −150 VP to whole Orange Team).'},
 ];
 let G = {};
 let CFG = { nPlayers:4, seats:[], useMA:false, useDuplicates:false, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
@@ -529,7 +529,7 @@ while (el.children.length > 80) el.removeChild(el.firstChild);
 }
 function newCard(suit, rank, subtype) {
 const isJoker = rank === 15;
-const isArrow = !isJoker && [2,3,6].includes(rank);
+const isArrow = !isJoker && [2,5,8,14].includes(rank);
 const isStar  = !isJoker && [1,2,9,11].includes(rank);
 const isSkull = !isJoker && [7,9,12].includes(rank);
 const baseVP  = isJoker ? (subtype==='TD'?5:-5) :
@@ -550,8 +550,8 @@ return `${rn} of ${this.suit}`;
 };
 }
 function buildFixSuit(suit) {
-// With duplicates: 5s x3, 8s x3, Queens x2 (neutral/no-VP ranks only) = 20 cards/suit
-// Ace, 2, 4, 9, Page — VP-bearing cards not duplicated
+// With duplicates: 5s x3 (each +10▲, rank-5 arrow doubling), 8s x3 (each +5▲, arrow-type), Page x2 (dup retains +5★) = 20 cards/suit (incl. joker)
+// Ace, 2, 4, 9, Queen — not duplicated
 const cards = [];
 if (G.useDuplicates) {
 cards.push(newCard(suit,1));  // Ace x1
@@ -610,9 +610,12 @@ if (c.rank === 4)   c.vpStr = '5 Tokoh Points';
 else if (c.rank === 10) c.vpStr = '10 Tokoh Points';
 else if (c.rank === 13 && !c.isDuplicate) c.vpStr = '10 Tokoh Points (Q)';
 else if (c.rank === 11 && c.isDuplicate) c.vpStr = '+5★ (Page dup)';
-else if (c.rank === 2) c.vpStr = '+5★ / +5▲';
+else if (c.rank === 2) c.vpStr = '+5★ / +5▲︎';
 else if (c.rank === 9) c.vpStr = '+5★ / −5☠';
-else if (c.isArrow) c.vpStr = '+5▲';
+else if (c.rank === 5) c.vpStr = '+10▲︎';
+else if (c.rank === 12) c.vpStr = '−10☠';
+else if (c.rank === 14) c.vpStr = '−10▼\ufe0e▼\ufe0e (team, shared)';
+else if (c.isArrow) c.vpStr = '+5▲︎';
 else if (c.isStar)  c.vpStr = `+${c.rank===1?10:5}★`;
 else if (c.isSkull) c.vpStr = `−5☠`;
 else c.vpStr = 'No VP';
@@ -1565,7 +1568,7 @@ const el=document.getElementById('host-lobby-list'); if(!el) return;
 const n=startConfig.nPlayers; let html='';
 for (let i=1;i<n;i++){
 const j=NET.seatAssign[i];
-const arrows = `<button class="net-move-btn" onclick="netSeatMove(${i},-1)" ${i<=1?'disabled':''} title="Move up">▲</button>`+
+const arrows = `<button class="net-move-btn" onclick="netSeatMove(${i},-1)" ${i<=1?'disabled':''} title="Move up">▲︎</button>`+
 `<button class="net-move-btn" onclick="netSeatMove(${i},1)" ${i>=n-1?'disabled':''} title="Move down">▼</button>`;
 html += j ? `<div class="net-lobby-row"><span class="seat-num">${i+1}</span><span class="who">${netEsc(j.name)}</span>${arrows}<span class="tag">👤 Connected</span></div>`
 : `<div class="net-lobby-row open-seat"><span class="seat-num">${i+1}</span><span class="who">Open seat</span><span class="tag">🤖 AI if empty</span></div>`;
@@ -2069,7 +2072,7 @@ const hint = document.getElementById('alt-vp-hint');
 if (!hint) return;
 const goal = startConfig.vpGoal || 1000;
 const cutthroat = Math.floor(goal * 0.75);
-hint.textContent = `Win at ${goal}▲ · Hard cutthroat at ${cutthroat}▲`;
+hint.textContent = `Win at ${goal}▲︎ · Hard cutthroat at ${cutthroat}▲︎`;
 }
 function renderSeatConfig() {
 const n = startConfig.nPlayers;
@@ -2473,7 +2476,7 @@ if (G.decl[s]==='grandCukong') { glog('Already declared Grand Cukong.','bad'); r
 if (G.decl[s]==='grandTichu') { glog('Already declared Grand Tokoh — cannot also declare Grand Cukong.','bad'); return; }
 G.decl[s] = 'grandCukong';
 recordCDeclarer(s);
-glog(`${SEAT_NAME_HTML(s)} declares Grand Cukong on Hand ${which}! (+50▲ team if 2nd/3rd out)`, 'imp');
+glog(`${SEAT_NAME_HTML(s)} declares Grand Cukong on Hand ${which}! (+50 VP team if 2nd/3rd out)`, 'imp');
 if (which === 'A') {
 G.handA[s] = [...G.handA[s], ...G.handA_rest[s]];
 G.handA_rest[s] = [];
@@ -2503,7 +2506,7 @@ const pill = document.createElement('div');
 pill.className = 'gd-vp-pill' + (s === currentSeat ? ' current-player' : '');
 const decl = G.decl[s];
 const declStr = decl === 'grandTichu' ? ' [GT]' : decl === 'grandCukong' ? ' [GC]' : '';
-pill.textContent = `${SEAT_NAME(s)}: ${G.totalVP[s]||0}▲${declStr}`;
+pill.textContent = `${SEAT_NAME(s)}: ${G.totalVP[s]||0}▲︎${declStr}`;
 strip.appendChild(pill);
 });
 }
@@ -2698,7 +2701,7 @@ grandBtn.className = 'gd-grand-btn';
 grandBtn.textContent = gtFirst ? 'Grand Tokoh ✦ ⚠' : 'Grand Tokoh ✦';
 grandBtn.title = gtFirst
 ? `⚠ ${SEAT_NAME(G.firstGTDeclarer[s])} already declared GT — you would pay solo penalty if you fail`
-: `Declare Grand Tokoh — go out 1st to succeed (+${G.nPlayers===2?200:100}▲${G.nPlayers===2?' — doubled in 2P':' each teammate'})`;
+: `Declare Grand Tokoh — go out 1st to succeed (+${G.nPlayers===2?200:100} VP${G.nPlayers===2?' — doubled in 2P':' each teammate'})`;
 grandBtn.onclick = () => gdCallGrand(s, which);
 btns.appendChild(grandBtn);
 if (G.nPlayers !== 2) {
@@ -2708,7 +2711,7 @@ gcBtn.style.background = 'var(--green)';
 gcBtn.textContent = gcFirst ? 'Grand Cukong ✦ ⚠' : 'Grand Cukong ✦';
 gcBtn.title = gcFirst
 ? `⚠ ${SEAT_NAME(G.firstCDeclarer[s])} already declared GC — you would pay solo penalty if you fail`
-: 'Declare Grand Cukong — go out 2nd or 3rd to succeed (+50▲ each teammate)';
+: 'Declare Grand Cukong — go out 2nd or 3rd to succeed (+50 VP each teammate)';
 gcBtn.onclick = () => gdCallGrandCukong(s, which);
 btns.appendChild(gcBtn);
 }
@@ -2850,9 +2853,24 @@ beginPassing();
 }
 function assignProvisionalTeams() {
 const n = G.nPlayers;
-if (n === 2) { G.team1=[0]; G.team2=[1]; G.teamBlue=[0]; G.teamRed=[1]; return; }
-if (n === 4) { G.team1=[0,2]; G.team2=[1,3]; G.teamBlue=[0,2]; G.teamRed=[1,3]; return; }
-if (n === 6) { G.team1=[0,2,4]; G.team2=[1,3,5]; G.teamBlue=[0,2,4]; G.teamRed=[1,3,5]; return; }
+G.affiliations = Array(G.nPlayers).fill(null);
+if (n === 2) {
+G.team1=[0]; G.team2=[1]; G.teamBlue=[0]; G.teamRed=[1]; G.teamGreen=[];
+G.affiliations[0]='blue'; G.affiliations[1]='red';
+return;
+}
+if (n === 4) {
+G.team1=[0,2]; G.team2=[1,3]; G.teamBlue=[0,2]; G.teamRed=[1,3]; G.teamGreen=[];
+G.team1.forEach(s => G.affiliations[s]='blue');
+G.team2.forEach(s => G.affiliations[s]='red');
+return;
+}
+if (n === 6) {
+G.team1=[0,2,4]; G.team2=[1,3,5]; G.teamBlue=[0,2,4]; G.teamRed=[1,3,5]; G.teamGreen=[];
+G.team1.forEach(s => G.affiliations[s]='blue');
+G.team2.forEach(s => G.affiliations[s]='red');
+return;
+}
 if (n === 3) {
 const dhs = G.doubleHandSeat ?? 0;
 const others = allSeats().filter(s => s !== dhs);
@@ -2880,8 +2898,13 @@ return distB - distA;
 });
 G.team1 = [byDist[2], byDist[3]];
 G.team2 = [dhs, byDist[0], byDist[1]];
+G.teamBlue = [...G.team1];
+G.teamRed  = [...G.team2];
+G.teamGreen = [];
 G.teamBlueLeader = byDist[2];
 G.teamRedLeader  = dhs;
+G.team1.forEach(s => G.affiliations[s] = 'blue');
+G.team2.forEach(s => G.affiliations[s] = 'red');
 G.soloSeats = [];
 return;
 }
@@ -3221,7 +3244,7 @@ const isLead = s === G.teamBlueLeader ? ' 👑 Lead' : s === G.teamRedLeader ? '
 const pill = document.createElement('div');
 pill.className = `ts-vp-pill ${cls}${s === highlightSeat ? ' current-player' : ''}`;
 pill.innerHTML = `<span class="ts-vp-name">${SEAT_NAME(s)}${isLead}</span>
-<span class="ts-vp-score">${G.totalVP[s]||0}▲</span>
+<span class="ts-vp-score">${G.totalVP[s]||0}▲︎</span>
 <span class="ts-vp-team">${teamLabel}</span>`;
 strip.appendChild(pill);
 });
@@ -3425,7 +3448,7 @@ if (remoteAffilTurn) NET._impersonateSeat = seat;
 const options = cards.map(c => ({ label: `${c.ma.id} — ${c.ma.d.split('.')[0]}`, value: c.id }));
 options.push({ label: 'Pass — keep cards for later', value: 'pass' });
 showChoice(
-`Team Affiliation — ${SEAT_NAME(seat)} (${G.totalVP[seat]||0}▲)`,
+`Team Affiliation — ${SEAT_NAME(seat)} (${G.totalVP[seat]||0}▲︎)`,
 `Choose a card to activate, or pass. ${G.nPlayers >= 5 ? 2 : 1 - G.affilActivationsThisHand} activation(s) remaining this hand.`,
 options,
 v => {
@@ -3495,7 +3518,7 @@ G.teamOrange = [seat, target];
 G.teamOrangeLeader = seat;
 G.totalVP[target] = (G.totalVP[target]||0) + 25;
 G.vp[target] = (G.vp[target]||0) + 25;
-glog(`${SEAT_NAME_HTML(seat)} plays Pan — forms 🟠 Orange Team with ${SEAT_NAME_HTML(target)}! ${SEAT_NAME_HTML(target)} receives +25▲. GT stakes: +150▲ success / −150▲ failure.`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} plays Pan — forms 🟠 Orange Team with ${SEAT_NAME_HTML(target)}! ${SEAT_NAME_HTML(target)} receives +25 VP. GT stakes: +150 VP success / −150 VP failure.`, 'imp');
 G.decl[seat] = 'grandTichu';
 recordGTDeclarer(seat, true);
 if (!G.panPairs) G.panPairs = [];
@@ -3572,7 +3595,7 @@ return [];
 function handleLoversRejection(inviterSeat, targetSeat, inviterAff) {
 G.totalVP[targetSeat]  = (G.totalVP[targetSeat]||0)  - 25;
 G.totalVP[inviterSeat] = (G.totalVP[inviterSeat]||0) + 25;
-glog(`${SEAT_NAME_HTML(targetSeat)} gifts 25▲ to ${SEAT_NAME_HTML(inviterSeat)}.`, 'imp');
+glog(`${SEAT_NAME_HTML(targetSeat)} gifts 25 VP to ${SEAT_NAME_HTML(inviterSeat)}.`, 'imp');
 G.unaffiliatedSeats = G.unaffiliatedSeats.filter(s => s !== targetSeat);
 if (inviterAff === 'blue') {
 G.affiliations[targetSeat] = 'red'; G.teamRed.push(targetSeat);
@@ -3812,7 +3835,7 @@ const tDecl = G.decl?.[t.seat];
 const declLabel = tDecl === 'grandTichu' ? 'GT' : tDecl === 'tichu' ? 'T!' : tDecl === 'grandCukong' ? 'GC' : tDecl === 'cukong' ? 'C!' : null;
 const declBadge = declLabel ? ` <span style="display:inline-block;background:${tDecl==='grandTichu'||tDecl==='tichu'?'#8B5E0A':'#2a7a2a'};color:#fff;font-size:0.7rem;font-weight:800;padding:1px 5px;border-radius:4px;vertical-align:middle">${declLabel}</span>` : '';
 const tVP = G.totalVP?.[t.seat] ?? 0;
-const vpTag = ` <span style="font-size:0.75rem;color:var(--text2);vertical-align:middle">${tVP}▲</span>`;
+const vpTag = ` <span style="font-size:0.75rem;color:var(--text2);vertical-align:middle">${tVP}▲︎</span>`;
 const isTeammate = teamCls && teamCls === myTeamCls;
 const teammateTag = isTeammate ? ` <span style="color:var(--gold3);font-style:italic">(teammate: ${SEAT_NAME(t.seat)})</span>` : '';
 div.innerHTML = `<div class="pass-target-name">${t.dir} (${t.count} card${t.count>1?'s':''})${declBadge}${vpTag}</div>
@@ -5049,7 +5072,7 @@ if (balCard) {
 G.bs[seat] = G.bs[seat].filter(c => c.id !== balCard.id);
 discardMA(balCard, seat);
 }
-glog(`Balance: ${SEAT_NAME_HTML(winner)} transfers 100▲ to ${SEAT_NAME_HTML(seat)}.`, 'good');
+glog(`Balance: ${SEAT_NAME_HTML(winner)} transfers 100▲︎ to ${SEAT_NAME_HTML(seat)}.`, 'good');
 render();
 return true;
 }
@@ -5117,7 +5140,7 @@ G.vp[winner] = (G.vp[winner]||0) - 100;
 G.vp[bSeat]  = (G.vp[bSeat] ||0) + 100;
 G.totalVP[winner] = (G.totalVP[winner]||0) - 100;
 G.totalVP[bSeat]  = (G.totalVP[bSeat] ||0) + 100;
-glog(`Balance: ${SEAT_NAME_HTML(winner)} transfers 100▲ to ${SEAT_NAME_HTML(bSeat)}.`, 'good');
+glog(`Balance: ${SEAT_NAME_HTML(winner)} transfers 100▲︎ to ${SEAT_NAME_HTML(bSeat)}.`, 'good');
 } else {
 // Condition not met — return card to player's tableau
 const balCard = G.maDiscard.find(c => c.ma && c.ma.fx === 'balance');
@@ -5125,7 +5148,7 @@ if (balCard) {
 G.maDiscard = G.maDiscard.filter(c => c.id !== balCard.id);
 if (!G.bs[bSeat]) G.bs[bSeat] = [];
 G.bs[bSeat].push(balCard);
-glog(`Balance: condition not met (gap ${winnerVP - holderVP}▲) — card returned to ${SEAT_NAME_HTML(bSeat)}.`, 'imp');
+glog(`Balance: condition not met (gap ${winnerVP - holderVP}▲︎) — card returned to ${SEAT_NAME_HTML(bSeat)}.`, 'imp');
 }
 }
 }
@@ -5133,7 +5156,7 @@ G.suitBonus.forEach(sb=>{
 if (cards.some(c=>c.suit===sb.suit)) {
 G.arrowVP[winner]=(G.arrowVP[winner]||0)+10;
 G.vp[winner]=(G.vp[winner]||0)+10;
-glog(`${SEAT_NAME_HTML(winner)} ${sb.suit} bonus (${sb.suit} activated by ${SEAT_NAME(sb.seat)}): +10▲.`,'good');
+glog(`${SEAT_NAME_HTML(winner)} ${sb.suit} bonus (${sb.suit} activated by ${SEAT_NAME(sb.seat)}): +10▲︎.`,'good');
 }
 });
 if (G.cosmosSeat!==null) {
@@ -5142,7 +5165,7 @@ const suits = new Set(cards.map(c=>c.suit)).size;
 const bonus = suits*6;
 G.arrowVP[receiver]=(G.arrowVP[receiver]||0)+bonus;
 G.vp[receiver]=(G.vp[receiver]||0)+bonus;
-glog(`Cosmos: +${bonus}▲ (${suits} suits) → ${SEAT_NAME_HTML(receiver)}.`,'good');
+glog(`Cosmos: +${bonus}▲︎ (${suits} suits) → ${SEAT_NAME_HTML(receiver)}.`,'good');
 }
 }
 function checkGoOut(seat) {
@@ -5163,33 +5186,35 @@ const teamArr = G.teamBlue?.includes(seat)?G.teamBlue:G.teamRed?.includes(seat)?
 const isOrangeGT = G.teamOrange?.includes(seat) && isGT;
 const isFirstGT = G.firstGTDeclarer[seat] === seat;
 if (pos===1) {
-const baseBonus = isGT ? (isOrangeGT ? 150 : 100) : 50;
+const baseBonus = isGT ? (isOrangeGT ? 200 : 150) : 100;
 const bonus = G.nPlayers === 2 ? baseBonus * 2 : baseBonus;
 if (isFirstGT || G.nPlayers === 2) {
 // First declarer or 2P: full bonus to all teammates
 teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)+bonus; G.declVP[s]=(G.declVP[s]||0)+bonus; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+bonus; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! +${bonus}▲${isOrangeGT?' (Pan 1.5× bonus)':G.nPlayers===2?' (2P double bonus)':' each teammate'}.`,'good');
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! +${bonus} VP${isOrangeGT?' (Pan 1.5× bonus)':G.nPlayers===2?' (2P double bonus)':' each teammate'}.`,'good');
 } else {
 // Second declarer: full bonus to self, half to teammates
 const halfBonus = Math.floor(bonus / 2);
 G.vp[seat]=(G.vp[seat]||0)+bonus; G.declVP[seat]=(G.declVP[seat]||0)+bonus; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)+bonus;
 teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+halfBonus; G.declVP[s]=(G.declVP[s]||0)+halfBonus; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+halfBonus; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! (2nd declarer) +${bonus}▲ to ${SEAT_NAME(seat)}, +${halfBonus}▲ each teammate.`,'good');
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! (2nd declarer) +${bonus} VP to ${SEAT_NAME(seat)}, +${halfBonus} VP each teammate.`,'good');
 }
 } else {
 const pen = isGT ? (isOrangeGT ? 150 : 100) : 50;
+const declPen = isGT ? (isOrangeGT ? 200 : 150) : 100;
 if (G.nPlayers === 2) {
 const opp = allSeats().find(s => s !== seat);
 if (opp !== undefined) {
-G.vp[opp]=(G.vp[opp]||0)+pen; G.declVP[opp]=(G.declVP[opp]||0)+pen; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+pen;
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${pen}▲ to ${SEAT_NAME_HTML(opp)}.`,'bad');
+G.vp[opp]=(G.vp[opp]||0)+declPen; G.declVP[opp]=(G.declVP[opp]||0)+declPen; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+declPen;
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${declPen} VP to ${SEAT_NAME_HTML(opp)}.`,'bad');
 }
 } else if (isFirstGT) {
-teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)-pen; G.declVP[s]=(G.declVP[s]||0)-pen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-pen; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${pen}▲ each teammate${isOrangeGT?' (Pan 1.5× penalty)':''}.`,'bad');
+G.vp[seat]=(G.vp[seat]||0)-declPen; G.declVP[seat]=(G.declVP[seat]||0)-declPen; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)-declPen;
+teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)-pen; G.declVP[s]=(G.declVP[s]||0)-pen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-pen; });
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(seat)}, −${pen} VP each other teammate${isOrangeGT?' (Pan 1.5× penalty)':''}.`,'bad');
 } else {
-G.vp[seat]=(G.vp[seat]||0)-pen; G.declVP[seat]=(G.declVP[seat]||0)-pen; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)-pen;
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${pen}▲ to ${SEAT_NAME(seat)} only (subsequent declarer).`,'bad');
+G.vp[seat]=(G.vp[seat]||0)-declPen; G.declVP[seat]=(G.declVP[seat]||0)-declPen; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)-declPen;
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(seat)} only (subsequent declarer).`,'bad');
 }
 }
 }
@@ -5198,6 +5223,7 @@ const isGC = G.decl[seat]==='grandCukong';
 const teamArr = G.teamBlue?.includes(seat)?G.teamBlue:G.teamRed?.includes(seat)?G.teamRed:G.teamGreen?.includes(seat)?G.teamGreen:[seat];
 const isFirstC = G.firstCDeclarer[seat] === seat;
 const amount = isGC ? 50 : 30;
+const successAmount = isGC ? 75 : 55;
 const succeeded = pos===2 || pos===3;
 if (G._gcScoredSeats && G._gcScoredSeats.has(seat)) {
 glog(`[GUARD] ${SEAT_NAME(seat)} GC/C already scored this hand — skipping.`, 'bad');
@@ -5207,22 +5233,23 @@ G._gcScoredSeats.add(seat);
 if (succeeded) {
 if (isFirstC) {
 // First declarer: full amount to all teammates
-teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)+amount; G.declVP[s]=(G.declVP[s]||0)+amount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+amount; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! +${amount}▲ each teammate.`,'good');
+teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)+successAmount; G.declVP[s]=(G.declVP[s]||0)+successAmount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+successAmount; });
+glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! +${successAmount} VP each teammate.`,'good');
 } else {
 // Second declarer: full to self, half to teammates
-const halfAmount = Math.floor(amount / 2);
-G.vp[seat]=(G.vp[seat]||0)+amount; G.declVP[seat]=(G.declVP[seat]||0)+amount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)+amount;
+const halfAmount = Math.floor(successAmount / 2);
+G.vp[seat]=(G.vp[seat]||0)+successAmount; G.declVP[seat]=(G.declVP[seat]||0)+successAmount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)+successAmount;
 teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+halfAmount; G.declVP[s]=(G.declVP[s]||0)+halfAmount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+halfAmount; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! (2nd declarer) +${amount}▲ to ${SEAT_NAME(seat)}, +${halfAmount}▲ each teammate.`,'good');
+glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! (2nd declarer) +${successAmount} VP to ${SEAT_NAME(seat)}, +${halfAmount} VP each teammate.`,'good');
 }
 } else {
 if (isFirstC) {
-teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)-amount; G.declVP[s]=(G.declVP[s]||0)-amount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-amount; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${amount}▲ each teammate.`,'bad');
+G.vp[seat]=(G.vp[seat]||0)-successAmount; G.declVP[seat]=(G.declVP[seat]||0)-successAmount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)-successAmount;
+teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)-amount; G.declVP[s]=(G.declVP[s]||0)-amount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-amount; });
+glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${successAmount} VP to ${SEAT_NAME(seat)}, −${amount} VP each other teammate.`,'bad');
 } else {
-G.vp[seat]=(G.vp[seat]||0)-amount; G.declVP[seat]=(G.declVP[seat]||0)-amount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)-amount;
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${amount}▲ to ${SEAT_NAME(seat)} only (subsequent declarer).`,'bad');
+G.vp[seat]=(G.vp[seat]||0)-successAmount; G.declVP[seat]=(G.declVP[seat]||0)-successAmount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)-successAmount;
+glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${successAmount} VP to ${SEAT_NAME(seat)} only (subsequent declarer).`,'bad');
 }
 }
 }
@@ -5307,33 +5334,37 @@ const isGC = G.decl[s] === 'grandCukong';
 const isC  = G.decl[s] === 'cukong';
 if (isGT || isT) {
 const pen = isGT ? 100 : 50;
+const declPen = isGT ? 150 : 100;
 if (G.nPlayers === 2) {
 const opp = allSeats().find(x => x !== s);
 if (opp !== undefined) {
-G.vp[opp]=(G.vp[opp]||0)+pen; G.declVP[opp]=(G.declVP[opp]||0)+pen; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+pen;
-glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${pen}▲ to ${SEAT_NAME_HTML(opp)}.`,'bad');
+G.vp[opp]=(G.vp[opp]||0)+declPen; G.declVP[opp]=(G.declVP[opp]||0)+declPen; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+declPen;
+glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${declPen} VP to ${SEAT_NAME_HTML(opp)}.`,'bad');
 }
 } else {
 const teamArr = G.team1.includes(s)?G.team1:G.team2.includes(s)?G.team2:G.teamGreen?.includes(s)?G.teamGreen:[s];
 const isFirst = G.firstGTDeclarer[s] === s;
 if (isFirst) {
-teamArr.forEach(t=>{ G.vp[t]=(G.vp[t]||0)-pen; G.declVP[t]=(G.declVP[t]||0)-pen; G.gtDeclVP[t]=(G.gtDeclVP[t]||0)-pen; });
-glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${pen}▲ each teammate.`,'bad');
+G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-declPen;
+teamArr.filter(t=>t!==s).forEach(t=>{ G.vp[t]=(G.vp[t]||0)-pen; G.declVP[t]=(G.declVP[t]||0)-pen; G.gtDeclVP[t]=(G.gtDeclVP[t]||0)-pen; });
+glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(s)}, −${pen} VP each other teammate.`,'bad');
 } else {
-G.vp[s]=(G.vp[s]||0)-pen; G.declVP[s]=(G.declVP[s]||0)-pen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-pen;
-glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${pen}▲ to ${SEAT_NAME(s)} only.`,'bad');
+G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-declPen;
+glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(s)} only.`,'bad');
 }
 }
 } else if (isGC || isC) {
 const pen = isGC ? 50 : 30;
+const declPen = isGC ? 75 : 55;
 const teamArr = G.team1.includes(s)?G.team1:G.team2.includes(s)?G.team2:G.teamGreen?.includes(s)?G.teamGreen:[s];
 const isFirst = G.firstCDeclarer[s] === s;
 if (isFirst) {
-teamArr.forEach(t=>{ G.vp[t]=(G.vp[t]||0)-pen; G.declVP[t]=(G.declVP[t]||0)-pen; G.gcDeclVP[t]=(G.gcDeclVP[t]||0)-pen; });
-glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${pen}▲ each teammate.`,'bad');
+G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-declPen;
+teamArr.filter(t=>t!==s).forEach(t=>{ G.vp[t]=(G.vp[t]||0)-pen; G.declVP[t]=(G.declVP[t]||0)-pen; G.gcDeclVP[t]=(G.gcDeclVP[t]||0)-pen; });
+glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${declPen} VP to ${SEAT_NAME(s)}, −${pen} VP each other teammate.`,'bad');
 } else {
-G.vp[s]=(G.vp[s]||0)-pen; G.declVP[s]=(G.declVP[s]||0)-pen; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-pen;
-glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${pen}▲ to ${SEAT_NAME(s)} only.`,'bad');
+G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-declPen;
+glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${declPen} VP to ${SEAT_NAME(s)} only.`,'bad');
 }
 }
 });
@@ -5345,7 +5376,7 @@ G.vp[s] = (G.vp[s]||0) - 50;
 G.declVP[s] = (G.declVP[s]||0) - 50;
 G.gtDeclVP[s] = (G.gtDeclVP[s]||0) - 50;
 });
-glog(`Pan GT FAILED! ${SEAT_NAME_HTML(initiator)} & ${SEAT_NAME_HTML(invitee)} each −50▲ extra penalty.`, 'bad');
+glog(`Pan GT FAILED! ${SEAT_NAME_HTML(initiator)} & ${SEAT_NAME_HTML(invitee)} each −50 VP extra penalty.`, 'bad');
 }
 });
 }
@@ -5498,22 +5529,24 @@ G.tpVP[s] = (G.tpVP[s]||0) + tp;
 }
 });
 if (G.scoreMode === 'bzf') {
+// Teams smaller than 2 (e.g. 3P's solo double-hand seat) are intentionally
+// excluded from Arrow VP entirely — solo players neither earn nor suffer
+// Arrow-type card values (including King's negative pool contribution).
 const allTeams = [G.team1, G.team2, G.teamGreen].filter(t => t && t.length >= 2);
-const soloSeats = allSeats().filter(s =>
-!allTeams.some(t => t.includes(s))
-);
 allTeams.forEach(team => {
 const teamWentOut = team.filter(s => G.outOrder.includes(s));
 if (teamWentOut.length === 0) return;
 let pool = 0;
 team.forEach(s => {
-pool += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow).length * 5;
+pool += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow)
+.reduce((sum, c) => sum + (c.rank === 5 ? 10 : c.rank === 14 ? -10 : 5), 0);
 });
 const opposingTeams = allTeams.filter(t => t !== team);
 opposingTeams.forEach(oppTeam => {
 oppTeam.forEach(s => {
 if (notOut.includes(s)) {
-pool += [...(G.handA[s]||[]), ...(G.handB[s]||[])].filter(c => !c.isJoker && c.isArrow).length * 5;
+pool += [...(G.handA[s]||[]), ...(G.handB[s]||[])].filter(c => !c.isJoker && c.isArrow)
+.reduce((sum, c) => sum + (c.rank === 5 ? 10 : c.rank === 14 ? -10 : 5), 0);
 }
 });
 });
@@ -5522,26 +5555,28 @@ team.forEach(s => {
 G.arrowVP[s] = (G.arrowVP[s]||0) + pool;
 G.vp[s] = (G.vp[s]||0) + pool;
 });
-glog(`Team [${team.map(SEAT_NAME).join('+')}] Arrow pool: +${pool}▲ each.`);
+glog(`Team [${team.map(SEAT_NAME).join('+')}] Arrow pool: +${pool}▲︎ each.`);
 });
 allSeats().forEach(s => {
 if (!G.outOrder.includes(s)) return; // Skull VP only scores for players who went out
-const skulls = (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isSkull).length;
-if (skulls > 0) {
-G.vp[s] = (G.vp[s]||0) - (skulls * 5);
-G.skullVP[s] = (G.skullVP[s]||0) - (skulls * 5);
-glog(`${SEAT_NAME_HTML(s)}: −${skulls*5}☠ from ${skulls} captured skulls.`, 'bad');
+const skullCards = (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isSkull);
+if (skullCards.length > 0) {
+const skullPen = skullCards.reduce((sum, c) => sum + (c.rank === 12 ? 10 : 5), 0);
+G.vp[s] = (G.vp[s]||0) - skullPen;
+G.skullVP[s] = (G.skullVP[s]||0) - skullPen;
+glog(`${SEAT_NAME_HTML(s)}: −${skullPen}☠ from ${skullCards.length} captured skulls.`, 'bad');
 }
 });
 if (firstOut !== undefined) {
-let handSkulls = 0;
+let handSkullCards = [];
 notOut.forEach(s => {
-handSkulls += [...(G.handA[s]||[]), ...(G.handB[s]||[])].filter(c => !c.isJoker && c.isSkull).length;
+handSkullCards.push(...[...(G.handA[s]||[]), ...(G.handB[s]||[])].filter(c => !c.isJoker && c.isSkull));
 });
-if (handSkulls > 0) {
-G.vp[firstOut] = (G.vp[firstOut]||0) - (handSkulls * 5);
-G.skullVP[firstOut] = (G.skullVP[firstOut]||0) - (handSkulls * 5);
-glog(`${SEAT_NAME_HTML(firstOut)}: −${handSkulls*5}☠ from ${handSkulls} unplayed hand skulls.`, 'bad');
+if (handSkullCards.length > 0) {
+const handSkullPen = handSkullCards.reduce((sum, c) => sum + (c.rank === 12 ? 10 : 5), 0);
+G.vp[firstOut] = (G.vp[firstOut]||0) - handSkullPen;
+G.skullVP[firstOut] = (G.skullVP[firstOut]||0) - handSkullPen;
+glog(`${SEAT_NAME_HTML(firstOut)}: −${handSkullPen}☠ from ${handSkullCards.length} unplayed hand skulls.`, 'bad');
 }
 }
 }
@@ -6169,17 +6204,38 @@ nats.forEach(c => { if (!freq[c.rank]) freq[c.rank]=[]; freq[c.rank].push(c); })
 const singletons = nats.filter(c => freq[c.rank].length === 1).sort((a,b) => a.rank-b.rank);
 const pairs = Object.values(freq).filter(g => g.length >= 2)
 .map(g => g.slice(0,2)).sort((a,b) => a[0].rank - b[0].rank);
+// Prefer a run of 2+ consecutive pair ranks (running pairs) over just the
+// single lowest pair — was previously ignored entirely in this 2-player
+// endgame path, unlike the main candidate logic elsewhere in this function.
+const pairRanksEndgame = pairs.map(p => p[0].rank);
+let seqPairRun = null;
+for (let i = 0; i < pairRanksEndgame.length; i++) {
+let j = i;
+while (j+1 < pairRanksEndgame.length && pairRanksEndgame[j+1] === pairRanksEndgame[j]+1) j++;
+if (j > i) {
+const runCards = [];
+for (let k = i; k <= j; k++) runCards.push(...freq[pairRanksEndgame[k]].slice(0,2));
+const sd = trySeqDoubles(runCards);
+if (sd) { seqPairRun = { cards: runCards, set: sd, rank: pairRanksEndgame[i] }; }
+break;
+}
+i = j;
+}
 const onlySingletons = pairs.length === 0;
 const onlyPairs = singletons.length === 0;
 if (onlySingletons) {
 if (singletons.length) { const s=validateSet([singletons[0]]); if(s){playCards(seat,[singletons[0]],s);return;} }
 } else if (onlyPairs) {
+if (seqPairRun) { playCards(seat, seqPairRun.cards, seqPairRun.set); return; }
 if (pairs.length) { const s=validateSet(pairs[0]); if(s&&!s.isBomb){playCards(seat,pairs[0],s);return;} }
 } else {
 const lowestSingle = singletons[0];
 const lowestPair = pairs[0];
-if (lowestSingle && (!lowestPair || lowestSingle.rank <= lowestPair[0].rank)) {
+const pairRankForCompare = seqPairRun ? seqPairRun.rank : (lowestPair ? lowestPair[0].rank : null);
+if (lowestSingle && (pairRankForCompare === null || lowestSingle.rank <= pairRankForCompare)) {
 const s=validateSet([lowestSingle]); if(s){playCards(seat,[lowestSingle],s);return;}
+} else if (seqPairRun) {
+playCards(seat, seqPairRun.cards, seqPairRun.set); return;
 } else if (lowestPair) {
 const s=validateSet(lowestPair); if(s&&!s.isBomb){playCards(seat,lowestPair,s);return;}
 }
@@ -6208,8 +6264,13 @@ if (s && s.type === 'Single') { playCards(seat, [card], s); return; }
 const anjing = hand.find(c => c.role === ROLES.Anjing);
 const aiDeclared = !!G.decl[seat];
 const aiHasGCC = G.decl[seat]==='cukong' || G.decl[seat]==='grandCukong';
-// Allow Anjing redirect for undeclared AI, OR GC/C-declared AI who must avoid going out 1st
-if (anjing && (!aiDeclared || aiHasGCC) && !mj) {
+const aiHasGTT = G.decl[seat]==='tichu' || G.decl[seat]==='grandTichu';
+// Allow Anjing redirect for undeclared AI, GC/C-declared AI who must avoid
+// going out 1st, OR GT/T-declared AI — who must get rid of Anjing at the
+// first opportunity, since it can only ever be played as a lead. Holding it
+// risks becoming stuck with it as an unplayable last card during a stretch
+// where someone else has the lead, which fails the declaration outright.
+if (anjing && (!aiDeclared || aiHasGCC || aiHasGTT) && !mj) {
 const myTeam = G.team1.includes(seat)?G.team1:G.team2.includes(seat)?G.team2:G.teamGreen?.includes(seat)?G.teamGreen:[];
 const activeTeammates = myTeam.filter(s => s !== seat && !G.outOrder.includes(s));
 const natsInHand = hand.filter(c => !c.isJoker && c.role !== ROLES.Anjing);
@@ -6270,10 +6331,13 @@ const higherDeclTeammate = myTeam.filter(s => s !== seat && !G.outOrder.includes
 .some(s => declPriority(s) > aiDeclP);
 const selfRegainAnjing = selfRegain && !higherDeclTeammate && hand.length > 1;
 if (selfRegainAnjing && anjingTarget === null) anjingTarget = anjingRecipient;
-const shouldPlay = hand.length === 1 || anjingTarget !== null || usedLastTopper || selfRegainAnjing;
+// GT/T-declared: always play now, regardless of whether a "good" target was
+// found above — getting rid of Anjing takes priority over picking the ideal
+// recipient, since the alternative is risking a stuck, unplayable last card.
+const shouldPlay = aiHasGTT || hand.length === 1 || anjingTarget !== null || usedLastTopper || selfRegainAnjing;
 if (shouldPlay) {
-const target = anjingTarget ?? activeTeammates[0] ?? null;
-if (target !== null) {
+const target = anjingTarget ?? anjingRecipient ?? activeTeammates[0] ?? null;
+if (target !== null || aiHasGTT) {
 const s = validateSet([anjing]);
 if (s) { playCards(seat, [anjing], s); return; }
 }
@@ -6609,6 +6673,20 @@ const goOutMeld = [...strategicLowNonSingles, ...strategicHighAll].find(c =>
 c.cards.length === hand.length && gcFilter(c)
 );
 if (goOutMeld) { playCards(seat, goOutMeld.cards, goOutMeld.set); return; }
+// Garuda + any single natural card legally forms a wildcard Pair (taking that
+// card's rank) — if that's the AI's last 2 cards, prefer playing them together
+// to go out in one play, rather than letting the natural card get claimed below
+// as an ordinary single and stranding Garuda alone for a later turn.
+const garudaLead = hand.find(c => c.role === ROLES.Garuda);
+if (garudaLead && hand.length === 2) {
+const otherLead = hand.find(c => c.id !== garudaLead.id);
+if (otherLead && !otherLead.isJoker) {
+const garudaPair = validateSet([otherLead, garudaLead]);
+if (garudaPair && garudaPair.type === 'Pair' && (!mustAvoidFirstOut || hand.length > garudaPair.cards.length)) {
+playCards(seat, [otherLead, garudaLead], garudaPair); return;
+}
+}
+}
 for (const c of strategicLowSingles) {
 const allowed = gcSafeToLeadLow ? hand.length > c.cards.length : gcFilter(c);
 if (allowed) { playCards(seat, c.cards, c.set); return; }
@@ -7320,6 +7398,23 @@ G.trickPassed[seat] = true; recordGTDeclPass(seat);
 glog(`${SEAT_NAME_HTML(seat)} passes.`);
 render(); checkTrickEnd(seat, false); return;
 }
+// Don't go out ahead of a teammate whose T/GT/C/GC declaration is still live and
+// doable — going out first ends this seat's participation and undermines the
+// teammate's chance to fulfill their own declaration. Mirrors the Cukong
+// self-preservation guard above; same Mulai-wish exception applies.
+const wouldGoOutAheadOfTeammate = hand.length === bestResponse.cards.length &&
+myTeam.some(s => s !== seat && !G.outOrder.includes(s) &&
+(G.decl[s]==='tichu'||G.decl[s]==='grandTichu'||G.decl[s]==='cukong'||G.decl[s]==='grandCukong') &&
+isDeclDoable(s));
+if (wouldGoOutAheadOfTeammate && !mustFulfillWish) {
+glog(`${SEAT_NAME_HTML(seat)} avoids going out ahead of a declaring teammate.`, 'imp');
+if (G.useMA) aiActivateFortuneOnPass(seat);
+if (G.useMA) aiActivateBalanceOnPass(seat);
+if (G.useMA) aiActivateTransfigOnPass(seat);
+G.trickPassed[seat] = true; recordGTDeclPass(seat);
+glog(`${SEAT_NAME_HTML(seat)} passes.`);
+render(); checkTrickEnd(seat, false); return;
+}
 playCards(seat, bestResponse.cards, bestResponse.set); return;
 }
 if (G.useMA) aiActivateFortuneOnPass(seat);
@@ -7384,6 +7479,7 @@ function getPlayableSingles(hand, curr, seat) {
 const diff = G.diff || 'medium';
 const currRank = curr ? (curr.topRank || curr.rank || 0) : 0;
 const results = [];
+const selfDeclared = G.decl[seat] === 'tichu' || G.decl[seat] === 'grandTichu';
 hand.forEach(c => {
 if (c.role === ROLES.Garuda) {
 if (!curr || curr.type !== 'Single') return;
@@ -7391,7 +7487,8 @@ if (diff === 'easy') {
 if (currRank !== 14) return;
 } else if (diff === 'medium') {
 if (currRank !== 14) return;
-if (garudaCompletesMeld(hand)) return;
+// Once declared, covering a King takes priority over saving Garuda for a meld.
+if (garudaCompletesMeld(hand) && !(selfDeclared && currRank === 14)) return;
 } else {
 const myTeam = G.team1.includes(seat) ? G.team1 : G.team2.includes(seat) ? G.team2 : [seat];
 let highestOppSingleton = 0;
@@ -7402,8 +7499,8 @@ if (!c.isJoker && !c.isMajorArcana && c.rank > highestOppSingleton)
 highestOppSingleton = c.rank;
 });
 });
-if (currRank < highestOppSingleton) return;
-if (garudaCompletesMeld(hand)) {
+if (currRank < highestOppSingleton && !(selfDeclared && currRank === 14)) return;
+if (garudaCompletesMeld(hand) && !(selfDeclared && currRank === 14)) {
 const threat = opponentGoingOut(seat);
 if (!threat || !aiCanFollowOut(hand, currRank)) return;
 }
@@ -7712,7 +7809,7 @@ consumeMA();
 switch(ma.fx){
 case 'suitbonus':
 G.suitBonus.push({suit:ma.suit,seat});
-glog(`+10▲ if ${ma.suit} in trick.`,'good'); break;
+glog(`+10▲︎ if ${ma.suit} in trick.`,'good'); break;
 case 'cosmos': G.cosmosSeat=seat; break;
 case 'starma': G.starDoubleOn=true; break;
 case 'emergence':
@@ -7849,7 +7946,7 @@ case 'balance': {
 if (G.balanceSeat !== null) { glog('Balance already pending this trick.', 'bad'); return; }
 consumeMA();
 G.balanceSeat = seat;
-glog(`${SEAT_NAME_HTML(seat)} activates Balance — will transfer 100▲ from trick winner if they lead by 100+▲.`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} activates Balance — will transfer 100▲︎ from trick winner if they lead by 100+▲︎.`, 'imp');
 render(); updateActions();
 return;
 }
@@ -7996,16 +8093,28 @@ vpDisplay='TP'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-skull);font
 } else if (card.role === ROLES.Anjing) {
 vpDisplay='★'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
 } else if (!card.isJoker && card.rank === 2) {
-vpDisplay='★⬆'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
+vpDisplay='★▲\ufe0e'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
 } else if (!card.isJoker && card.rank === 9) {
 vpDisplay='★☠'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
+} else if (!card.isJoker && card.rank === 5 && card.isDuplicate) {
+vpDisplay='▲\ufe0e▲\ufe0e'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-arrow);font-weight:700"';
+} else if (!card.isJoker && card.rank === 8 && card.isDuplicate) {
+vpDisplay='▲\ufe0e'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-arrow);font-weight:700"';
+} else if (!card.isJoker && card.rank === 5) {
+vpDisplay='▲︎▲︎'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-arrow);font-weight:700"';
+} else if (!card.isJoker && card.rank === 12) {
+vpDisplay='☠☠'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-skull);font-weight:700"';
+} else if (!card.isJoker && card.rank === 14) {
+vpDisplay='▼\ufe0e▼\ufe0e'; vpStripStyle=' style="color:var(--vp-skull)"'; vpFaceStyle=' style="color:var(--vp-skull);font-weight:700"';
 } else if (!card.isJoker && card.rank === 11 && card.isDuplicate) {
-vpDisplay='★D'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
+vpDisplay='★'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
 } else if (!card.isJoker && card.isDuplicate) {
 vpDisplay='D'; vpStripStyle=' style="opacity:0.6"'; vpFaceStyle=' style="opacity:0.5;color:var(--text2)"';
+} else if (!card.isJoker && card.rank === 1) {
+vpDisplay='★★'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
 } else {
-const vpIcon = card.isArrow?'⬆':card.isStar?'★':card.isSkull?'☠':'·';
-const vpColor = vpIcon==='⬆'?'arrow':vpIcon==='★'?'star':vpIcon==='☠'?'skull':'bonus';
+const vpIcon = card.isArrow?'▲\ufe0e':card.isStar?'★':card.isSkull?'☠':'·';
+const vpColor = vpIcon==='▲\ufe0e'?'arrow':vpIcon==='★'?'star':vpIcon==='☠'?'skull':'bonus';
 vpDisplay=vpIcon;
 vpStripStyle=vpIcon==='·'?' style="opacity:0.25"':'';
 vpFaceStyle=vpIcon==='·'?' style="opacity:0.2;color:var(--text2)"':`  style="color:var(--vp-${vpColor})"`;
@@ -8023,12 +8132,10 @@ vpFaceDisplay = '<span style="color:#c02020">25</span>';
 vpFaceDisplay = '<span style="color:#2060c0">10</span>';
 } else if (!card.isJoker && card.rank === 2) {
 vpFaceDisplay = '<span style="color:#2060c0">5</span>';
-} else if (!card.isJoker && card.rank === 3) {
-vpFaceDisplay = '<span style="color:#2060c0">5</span>';
 } else if (!card.isJoker && card.rank === 4) {
 vpFaceDisplay = '<span style="color:#000000">5</span>';
-} else if (!card.isJoker && card.rank === 6) {
-vpFaceDisplay = '<span style="color:#2060c0">5</span>';
+} else if (!card.isJoker && card.rank === 5) {
+vpFaceDisplay = '<span style="color:#2060c0">10</span>';
 } else if (!card.isJoker && card.rank === 7) {
 vpFaceDisplay = '<span style="color:#c02020">5</span>';
 } else if (!card.isJoker && card.rank === 9) {
@@ -8038,11 +8145,15 @@ vpFaceDisplay = '<span style="color:#000000">10</span>';
 } else if (!card.isJoker && card.rank === 11) {
 vpFaceDisplay = '<span style="color:#2060c0">5</span>';
 } else if (!card.isJoker && card.rank === 12) {
-vpFaceDisplay = '<span style="color:#c02020">5</span>';
+vpFaceDisplay = '<span style="color:#c02020">10</span>';
 } else if (!card.isJoker && card.rank === 13 && !card.isDuplicate) {
 vpFaceDisplay = '<span style="color:#000000">10</span>';
+} else if (!card.isJoker && card.rank === 14) {
+vpFaceDisplay = '<span style="color:#c02020">10</span>';
+} else if (!card.isJoker && card.rank === 8) {
+vpFaceDisplay = '<span style="color:#2060c0">5</span>';
 } else {
-vpFaceDisplay = ''; // King, duplicate Queen, 5, 8 — no VP
+vpFaceDisplay = ''; // duplicate Queen, 3, 6 — no VP
 }
 inner.innerHTML = `<div class="bzf-c-strip">
 <span class="bzf-c-strip-rank">${card.isJoker?roleLabel(card.role):String(card.rank)}</span>
@@ -8260,10 +8371,15 @@ token.style.top  = cy + '%';
 const halfW  = actualW  / 2;
 const halfH  = actualH  / 2;
 const rimPx  = 10;
-const absCos = Math.abs(cos);
-const absSin = Math.abs(sin);
-const pushX  = cos * (absCos > absSin ? halfW + rimPx : halfW * absCos + rimPx);
-const pushY  = sin * (absSin > absCos ? halfH + rimPx : halfH * absSin + rimPx);
+// Push distance for an axis-aligned box moving radially away from a circle:
+// rim + the box's own extent projected onto the push direction. This is exact
+// for any angle (previously a dominant-axis heuristic was used, which only
+// gave a fractional push on the non-dominant axis — correct for seats near a
+// compass direction like 2P/4P/6P, but it undershoots for angles where both
+// axes matter, like 5P's diagonal seats, letting a wide box touch the felt).
+const pushDist = rimPx + halfW * Math.abs(cos) + halfH * Math.abs(sin);
+const pushX  = cos * pushDist;
+const pushY  = sin * pushDist;
 token.style.transform = `translate(calc(-50% + ${pushX}px), calc(-50% + ${pushY}px))`;
 area.appendChild(token);
 });
@@ -8305,7 +8421,7 @@ chip.appendChild(nameEl);
 const vpEl = document.createElement('div');
 vpEl.className = 'seat-token-vp';
 vpEl.style.color = myTeam === 'team1' ? 'var(--pas-team1)' : myTeam === 'team2' ? 'var(--pas-team2)' : myTeam === 'team-green' ? 'var(--green)' : 'var(--text2)';
-vpEl.textContent = (G.vp[seat] || 0) + (G.scoreMode === 'bzf' ? '▲' : 'pt') +
+vpEl.textContent = (G.vp[seat] || 0) + (G.scoreMode === 'bzf' ? '▲︎' : 'pt') +
 ' (' + (G.totalVP[seat] || 0) + ')';
 chip.appendChild(vpEl);
 if (isTrickWinner) {
@@ -8449,7 +8565,7 @@ break;
 }
 case 'suitbonus':
 if (inTrick && G.trickCards?.length > 0)
-hint = `Earn +10▲ if ${card.ma.suit} suit wins this trick`;
+hint = `Earn +10▲︎ if ${card.ma.suit} suit wins this trick`;
 break;
 case 'starma':
 if (inTrick && !G.starDoubleOn && (G.trickCards||[]).some(t => t.card.isStar))
@@ -8461,7 +8577,7 @@ hint = 'Reveal all hands to all players';
 break;
 case 'cosmos':
 if (inTrick && isLead && !G.cosmosSeat)
-hint = 'Score +6▲ per distinct suit in the trick';
+hint = 'Score +6▲︎ per distinct suit in the trick';
 break;
 case 'fortune':
 if (inTrick && isMyTurn)
@@ -8472,8 +8588,8 @@ if (inTrick && isMyTurn) {
 const w = G.trickWinner;
 if (w !== null && w !== undefined) {
 const gap = (G.totalVP[w]||0) - (G.totalVP[seat]||0);
-if (gap > 100) hint = `Transfer 100▲ from trick winner (they lead by ${gap}▲)`;
-else hint = 'Transfer 100▲ from trick winner if they lead by 100+▲';
+if (gap > 100) hint = `Transfer 100▲︎ from trick winner (they lead by ${gap}▲︎)`;
+else hint = 'Transfer 100▲︎ from trick winner if they lead by 100+▲︎';
 }
 }
 break;
@@ -8506,7 +8622,7 @@ namEl.textContent = SEAT_NAME(seat);
 namEl.className = `player-name ${teamCls}`;
 const playerVpTagEl = document.getElementById('player-vp-tag');
 if (playerVpTagEl) playerVpTagEl.textContent =
-`${G.vp[seat]||0}${G.scoreMode==='bzf'?'▲':'pts'} (${G.totalVP[seat]||0} total)`;
+`${G.vp[seat]||0}${G.scoreMode==='bzf'?'▲︎':'pts'} (${G.totalVP[seat]||0} total)`;
 const decl = G.decl[seat];
 const declStrip = document.getElementById('team-decl-strip');
 declStrip.innerHTML = '';
@@ -8688,7 +8804,7 @@ Hearts:'var(--hearts)', Spades:'var(--swords)', Clubs:'var(--staffs)',
 Diamonds:'var(--coins)', Moon:'var(--moon)', Sun:'var(--sun)',
 MajorArcana:'var(--gold-dark)'
 };
-const SUIT_ICON = { Hearts:'♥', Spades:'♠', Clubs:'♣', Diamonds:'♦', Moon:'☽', Sun:'☼' };
+const SUIT_ICON = { Hearts:'♥︎', Spades:'♠︎', Clubs:'♣︎', Diamonds:'♦︎', Moon:'☽︎', Sun:'☼︎' };
 const roleLabel = r => r==='Naga'?'N':r==='Garuda'?'G':r==='Anjing'?'An':r==='Mulai'?'0':'?';
 const bySeat = {};
 const seatPlayOrder = [];
@@ -8794,18 +8910,25 @@ const vpDisp = card.role === 'Naga' ? 'TP'
 : card.role === 'Garuda' ? 'TP'
 : card.role === 'Anjing' ? '★'
 : (!card.isJoker && (card.rank===4||card.rank===10||(card.rank===13&&!card.isDuplicate))) ? 'TP'
-: (!card.isJoker && card.rank===2) ? '★▲'
+: (!card.isJoker && card.rank===2) ? '★▲︎'
 : (!card.isJoker && card.rank===9) ? '★☠'
-: (!card.isJoker && card.rank===11 && card.isDuplicate) ? '★D'
+: (!card.isJoker && card.rank===5 && card.isDuplicate) ? '▲\ufe0e▲\ufe0e'
+: (!card.isJoker && card.rank===8 && card.isDuplicate) ? '▲\ufe0e'
+: (!card.isJoker && card.rank===5) ? '▲︎▲︎'
+: (!card.isJoker && card.rank===12) ? '☠☠'
+: (!card.isJoker && card.rank===14) ? '▼\ufe0e▼\ufe0e'
+: (!card.isJoker && card.rank===11 && card.isDuplicate) ? '★'
 : (!card.isJoker && card.isDuplicate) ? 'D'
-: (!card.isJoker && card.isArrow) ? '▲'
+: (!card.isJoker && card.rank===1) ? '★★'
+: (!card.isJoker && card.isArrow) ? '▲︎'
 : (!card.isJoker && card.isStar)  ? '★'
 : (!card.isJoker && card.isSkull) ? '☠'
 : '';
+const vpDispStyle = (!card.isJoker && card.rank===14) ? ' style="color:var(--vp-skull)"' : '';
 strip.innerHTML = `
 <span class="trick-strip-rank">${rankDisp}</span>
 <span class="trick-strip-suit">${suitDisp}</span>
-${vpDisp ? `<span class="trick-strip-vp">${vpDisp}</span>` : ''}
+${vpDisp ? `<span class="trick-strip-vp"${vpDispStyle}>${vpDisp}</span>` : ''}
 `;
 tz.appendChild(strip);
 });
@@ -9180,7 +9303,7 @@ const myTeam = G.teamGreen?.includes(s) ? 'team-green' :
 G.team1?.includes(s) ? 'team1' : G.team2?.includes(s) ? 'team2' : '';
 const nameDiv = document.createElement('div');
 nameDiv.className = `emergence-player-name ${myTeam}`;
-nameDiv.innerHTML = `${SEAT_NAME_HTML(s)} — ${hand.length} card${hand.length>1?'s':''} · ${G.totalVP[s]||0}▲`;
+nameDiv.innerHTML = `${SEAT_NAME_HTML(s)} — ${hand.length} card${hand.length>1?'s':''} · ${G.totalVP[s]||0}▲︎`;
 block.appendChild(nameDiv);
 const handDiv = document.createElement('div');
 handDiv.className = 'emergence-hand';
