@@ -72,14 +72,40 @@ body.net-client #net-spectate-banner{display:block;}
 body.net-client #pass-overlay{padding-bottom:44px;}
 body.net-client #net-stuck-btn{display:block;}
 .net-move-btn{border:1px solid var(--border);background:var(--surface);border-radius:4px;font-size:0.72rem;font-weight:800;color:var(--text2);padding:2px 7px;cursor:pointer;flex-shrink:0;}
-.net-move-btn:disabled{opacity:0.3;cursor:default;}</style>
+.net-move-btn:disabled{opacity:0.3;cursor:default;}
+.help-fab{position:fixed;top:10px;right:10px;z-index:1200;width:34px;height:34px;border-radius:50%;background:var(--gold);color:#1a1428;border:2px solid var(--gold-rim,#c8a870);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);}
+.help-fab:active{transform:scale(0.94);}
+#help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,8,20,0.72);z-index:1400;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+#help-modal-overlay.open{display:flex;}
+.help-modal{background:var(--surface);border:2px solid var(--gold-rim,#c8a870);border-radius:12px;max-width:620px;width:100%;margin-top:24px;padding:16px;color:var(--text);}
+.help-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.help-modal-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.15rem;color:var(--gold3);}
+.help-modal-close{background:none;border:none;font-size:1.4rem;color:var(--text2);cursor:pointer;line-height:1;padding:4px 8px;}
+.help-sec{border-top:1px solid var(--border);}
+.help-sec:first-of-type{border-top:none;}
+.help-sec-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;cursor:pointer;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.02em;}
+.help-sec-arrow{transition:transform 0.2s;color:var(--text2);}
+.help-sec.open .help-sec-arrow{transform:rotate(90deg);}
+.help-sec-body{display:none;padding:0 2px 12px;font-size:0.86rem;line-height:1.5;color:var(--text2);}
+.help-sec.open .help-sec-body{display:block;}
+.help-sec-body p{margin-bottom:6px;}
+.help-sec-body ul{margin:4px 0 6px 18px;}
+.help-sec-body b{color:var(--text);}
+#tip-callout-wrap{position:fixed;left:0;right:0;bottom:8px;z-index:1300;display:flex;justify-content:center;pointer-events:none;}
+.tip-callout{pointer-events:auto;max-width:340px;background:var(--gold2,#f0d080);color:#1a1428;border:2px solid var(--gold-dark,#9a7228);border-radius:10px;padding:10px 12px;box-shadow:0 4px 14px rgba(0,0,0,0.4);font-size:0.82rem;line-height:1.4;display:flex;gap:8px;align-items:flex-start;animation:tipIn 0.25s ease-out;}
+@keyframes tipIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.tip-callout-text{flex:1;}
+.tip-callout-text b{display:block;margin-bottom:2px;font-family:'Rajdhani',sans-serif;}
+.tip-callout-close{background:none;border:none;font-size:1.1rem;line-height:1;color:#1a1428;cursor:pointer;opacity:0.6;padding:0 2px;}</style>
 </head>
 <body>
+
+<button class="help-fab" onclick="openHelpModal()" title="How to play">?</button>
 
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v152</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v156</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -143,7 +169,7 @@ body.net-client #net-stuck-btn{display:block;}
   <div class="start-section">
     <div class="start-label">Scoring Mode</div>
     <div class="toggle-row">
-      <button class="toggle-btn active-bzf" id="score-bzf-btn" onclick="setScore('bzf')">BZF VP (Arrow/Star/Radioactive)</button>
+      <button class="toggle-btn active-bzf" id="score-bzf-btn" onclick="setScore('bzf')">BZF VP (▲︎/★/☢︎)</button>
       <button class="toggle-btn" id="score-tichu-btn" onclick="setScore('tichu')">Tokoh Only</button>
     </div>
   </div>
@@ -180,6 +206,19 @@ body.net-client #net-stuck-btn{display:block;}
       </button>
       <button class="toggle-btn active-ma" id="dup-off-btn" onclick="setDuplicates(false)">
         Standard (15 cards/suit)
+      </button>
+    </div>
+  </div>
+
+  <div class="start-section">
+    <div class="start-label">Teams</div>
+    <div class="toggle-row">
+      <button class="toggle-btn active-ma" id="fixedteams-off-btn" onclick="setFixedTeams(false)">
+        Dynamic
+      </button>
+      <button class="toggle-btn" id="fixedteams-on-btn" onclick="setFixedTeams(true)"
+        title="Keeps team assignments fixed for the whole game. If Major Arcana is also on, the Lovers, Pan, and Hermit cards (which form/change teams mid-game) are removed from that deck.">
+        🔒 Fixed Teams
       </button>
     </div>
   </div>
@@ -454,9 +493,124 @@ body.net-client #net-stuck-btn{display:block;}
   </div>
 </div>
 
+<!-- ══ HELP / TUTORIAL MODAL ══ -->
+<div id="help-modal-overlay" onclick="if(event.target===this) closeHelpModal()">
+  <div class="help-modal">
+    <div class="help-modal-head">
+      <div class="help-modal-title">How to Play</div>
+      <button class="help-modal-close" onclick="closeHelpModal()">×</button>
+    </div>
+    <div id="help-sections"></div>
+  </div>
+</div>
+
+<!-- ══ TUTORIAL TIP CALLOUTS ══ -->
+<div id="tip-callout-wrap"></div>
+
 <script>'use strict';
 const ROMAN = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI'];
 const SUITS_ALL = ['Hearts','Spades','Clubs','Diamonds','Moon','Sun'];
+
+// ═══════════════════════════════════════════════════════════════════════
+// TUTORIAL SYSTEM — reference panel + first-time contextual tips
+// ═══════════════════════════════════════════════════════════════════════
+const HELP_SECTIONS = [
+{ id:'basics', title:'The Basics', open:true, html:`
+<p><b>Goal:</b> be the first to empty your hand ("go out"). Each round you're dealt a hand; play continues in "tricks" until someone runs out of cards.</p>
+<p><b>Playing a trick:</b> the leader plays any legal set (a single card, a pair, a run, etc). Everyone after them must either play a <i>higher</i> set of the <b>same type and size</b>, or pass. The trick is won by whoever played the highest set; they lead the next trick.</p>
+<p><b>Selecting cards:</b> tap cards in your hand to select them, then tap Play. Tap Pass if you can't or don't want to beat the current play.</p>
+<p><b>Bombs</b> (four-of-a-kind, or specific special combos) can be played out of turn to interrupt play and beat almost anything.</p>`},
+{ id:'declarations', title:'Declarations', open:false, html:`
+<p>Before playing, you can stake bonus VP on a bold claim about how the hand will go:</p>
+<ul>
+<li><b>Tokoh (T):</b> "I'll be the one to go out." Declared after seeing your full hand.</li>
+<li><b>Grand Tokoh (GT):</b> the same claim, but declared <i>before</i> seeing the rest of your hand — riskier, bigger payout.</li>
+<li><b>Cukong (C) / Grand Cukong (GC):</b> a team-support claim — you're betting your <i>teammates</i> will go out 2nd/3rd, not necessarily you.</li>
+</ul>
+<p>Succeed and you (and often your team) gain VP. Fail and you personally pay the full penalty — teammates pay a smaller shared penalty only if you were the first on your team to declare.</p>`},
+{ id:'vp', title:'VP Scoring', open:false, html:`
+<p>There are five separate VP pools that add up to your score:</p>
+<ul>
+<li><b>★ Star VP:</b> yours alone, from specific high cards (Aces, Pages, etc).</li>
+<li><b>▲ Arrow VP:</b> shared with your whole team, but only if at least one of you goes out — built from cards your team actually captures in tricks.</li>
+<li><b>☢ Radioactive VP:</b> a penalty, yours alone, from certain cards (7s, 9s, Knights) if you capture them and go out.</li>
+<li><b>Tokoh Points (TP):</b> from Kings, 10s, Queens, and the Naga/Garuda jokers — mostly individual, with a bonus pool for whoever goes out first.</li>
+<li><b>Declaration VP:</b> the bonuses/penalties from Tokoh/Cukong declarations above.</li>
+</ul>
+<p>Solo players (in 3-player games) don't participate in Arrow or Radioactive VP at all — those are team-only pools.</p>`},
+{ id:'jokers', title:'Jokers', open:false, html:`
+<p>Each suit contributes one special Joker:</p>
+<ul>
+<li><b>Naga:</b> the strongest card in the game. Worth +25 Tokoh Points.</li>
+<li><b>Garuda:</b> nearly as strong in a trick, but worth −25 Tokoh Points. It can also pair up with any single card as a wildcard.</li>
+<li><b>Mulai:</b> always leads the very first trick of the hand, and can "wish" for a rank that other players must play when they're able to.</li>
+<li><b>Anjing:</b> the weakest card — can only ever be led, never played in response to someone else. Playing it passes the lead to your teammate.</li>
+</ul>`},
+{ id:'majors', title:'Major Arcana', open:false, html:`
+<p>An optional layer that adds tarot-themed cards with one-time special effects — things like swapping cards, forming ad-hoc teams mid-game, or granting bonus VP for specific suits in a trick. If Major Arcana is off, you can ignore this section entirely.</p>
+<p>Major Arcana games add an auction phase before play, where these special cards get distributed, and (in some player counts) let teams form dynamically based on who ends up holding which cards.</p>`}
+];
+function renderHelpSections() {
+const el = document.getElementById('help-sections');
+if (!el) return;
+el.innerHTML = HELP_SECTIONS.map(s => `
+<div class="help-sec${s.open?' open':''}" id="help-sec-${s.id}">
+<div class="help-sec-head" onclick="toggleHelpSection('${s.id}')"><span>${s.title}</span><span class="help-sec-arrow">›</span></div>
+<div class="help-sec-body">${s.html}</div>
+</div>`).join('');
+}
+function toggleHelpSection(id) {
+const el = document.getElementById('help-sec-'+id);
+if (el) el.classList.toggle('open');
+}
+function openHelpModal() {
+renderHelpSections();
+document.getElementById('help-modal-overlay').classList.add('open');
+}
+function closeHelpModal() {
+document.getElementById('help-modal-overlay').classList.remove('open');
+}
+
+// First-time contextual tips — each fires once, ever, per browser (localStorage).
+const TUTORIAL_TIPS = {
+firstHand: { title:'Your hand', body:'Tap a card to select it, tap again to deselect. Selected cards must form a legal set (single, pair, run, etc) before you can play them.' },
+firstLead: { title:'Your turn to lead', body:"No one's beaten yet this trick — you can play anything. Whatever you play sets the type and size everyone else must match or beat." },
+firstGrand: { title:'Grand declaration window', body:"You can stake VP on going out first, before seeing the rest of your hand. Higher risk, higher reward than declaring after passing — tap the ? button for full details." },
+firstAuction: { title:'Ready for Auction', body:"Passing is done — before you can play any cards, tap Ready for Auction to pick a Major Arcana card. Everyone needs to do this before trick play begins." },
+firstTrickEnd: { title:'Trick won', body:'Whoever played the highest set takes the trick and leads the next one. Cards they win stay with them for scoring at the end of the hand.' },
+firstScoreTally: { title:'Reading your results', body:"Each VP pool (Star/Arrow/Radioactive/TP/Declaration) is broken out separately here before being added into your total. Tap the ? button any time for what each one means." },
+firstJoker: { title:'A Joker!', body:'Jokers behave differently from normal cards — tap the ? button and see the Jokers section for what each one does.' }
+};
+function tutorialSeenSet() {
+try { return JSON.parse(localStorage.getItem('benTokoh_tutorialSeen') || '{}'); } catch(e) { return {}; }
+}
+function markTipSeen(id) {
+try {
+const seen = tutorialSeenSet();
+seen[id] = true;
+localStorage.setItem('benTokoh_tutorialSeen', JSON.stringify(seen));
+} catch(e) {}
+}
+function showTutorialTip(id) {
+const tip = TUTORIAL_TIPS[id];
+if (!tip) return;
+const seen = tutorialSeenSet();
+if (seen[id]) return;
+const wrap = document.getElementById('tip-callout-wrap');
+if (!wrap) return;
+if (document.getElementById('tip-callout-'+id)) return; // already showing
+const el = document.createElement('div');
+el.className = 'tip-callout';
+el.id = 'tip-callout-'+id;
+el.innerHTML = `<div class="tip-callout-text"><b>${tip.title}</b>${tip.body}</div><button class="tip-callout-close" onclick="dismissTutorialTip('${id}')">×</button>`;
+wrap.innerHTML = '';
+wrap.appendChild(el);
+}
+function dismissTutorialTip(id) {
+markTipSeen(id);
+const el = document.getElementById('tip-callout-'+id);
+if (el) el.remove();
+}
 const SUIT_ICON = { Hearts:'♥︎', Spades:'♠︎', Clubs:'♣︎', Diamonds:'♦︎', Moon:'☽︎', Sun:'☼︎' };
 const SUIT_COLOR = { Hearts:'hearts', Spades:'spades', Clubs:'clubs', Diamonds:'diamonds', Moon:'moon', Sun:'sun' };
 const RANK_NAME = { 0:'Mu',1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'Pg',12:'Kn',13:'Q',14:'K' };
@@ -645,11 +799,12 @@ render();
 }
 function buildMADeck() {
 const cards = [];
-const excludedSmall = (G.nPlayers <= 3) ? ['lovers','hermit','pan'] : [];
+const teamFormingFx = ['lovers','hermit','pan'];
+const excludeTeamForming = (G.nPlayers <= 3 || G.fixedTeams) ? teamFormingFx : [];
 const foolDef = MA_POOL.find(m=>m.id==='Fool');
 for (let i = 0; i < 9; i++) cards.push(newMACard(foolDef));
 for (const m of MA_POOL) {
-if (m.id !== 'Fool' && !excludedSmall.includes(m.fx)) cards.push(newMACard(m));
+if (m.id !== 'Fool' && !excludeTeamForming.includes(m.fx)) cards.push(newMACard(m));
 }
 return shuffle(cards);
 }
@@ -1111,7 +1266,7 @@ const jokers = (naga?1:0) + anjings + (cards.some(c=>c.role===ROLES.Garuda)?1:0)
 return jokers*2 + (naga?1:0);
 }
 function bidVP(cards) { return cards.reduce((s,c)=>s+Math.max(0,c.baseVP),0); }
-let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
+let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, fixedTeams:false, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
 let seatTypes = [];
 
 /* ══════════ ONLINE MULTIPLAYER — PHASE 1 (Networking Foundation) ══════════ */
@@ -2027,6 +2182,11 @@ startConfig.useDuplicates = val;
 document.getElementById('dup-on-btn').classList.toggle('active-ma', val);
 document.getElementById('dup-off-btn').classList.toggle('active-ma', !val);
 }
+function setFixedTeams(val) {
+startConfig.fixedTeams = val;
+document.getElementById('fixedteams-on-btn').classList.toggle('active-ma', val);
+document.getElementById('fixedteams-off-btn').classList.toggle('active-ma', !val);
+}
 function setMA(val) {
 startConfig.useMA = val;
 document.getElementById('ma-on-btn').className = 'toggle-btn' + (val?' active-ma':'');
@@ -2147,6 +2307,7 @@ seatNames: names,
 isHuman: types.map(t=>t==='human'),
 useMA: startConfig.useMA,
 useDuplicates: startConfig.useDuplicates,
+fixedTeams: startConfig.fixedTeams,
 scoreMode: startConfig.scoreMode,
 diff: startConfig.diff,
 vpGoal: startConfig.vpGoal || 1000,
@@ -2489,6 +2650,7 @@ function showGrandDealScreen() {
 G.phase = 'grandTichu';
 G._gdProceeded = false;
 document.getElementById('grand-deal-screen').classList.add('open');
+if (humanSeats().length > 0) showTutorialTip('firstGrand');
 G.gdVPQueue = allSeats().slice().sort((a, b) =>
 (G.totalVP[a]||0) - (G.totalVP[b]||0) || Math.random() - 0.5
 );
@@ -4120,6 +4282,7 @@ beginTichuWindow();
 }
 function showReadyForAuction() {
 G.phase = 'readyForAuction';
+if (humanSeats().length > 0) showTutorialTip('firstAuction');
 glog('Passing complete. Press <strong>Ready for Auction</strong> when you\'re ready to pick Major Arcana.', 'imp');
 render();
 }
@@ -4643,6 +4806,7 @@ const notPassed = allSeats().filter(s=>
 if (notPassed.length === 0) {
 if (G.resolveTimer) clearTimeout(G.resolveTimer);
 G._resolveHasNaga = hasNaga;
+if (humanSeats().length > 0) showTutorialTip('firstTrickEnd');
 const delay = humanSeats().length > 0 ? 3000 : 1000;
 G.resolveTimer = setTimeout(() => {
 G.resolveTimer = null;
@@ -5576,6 +5740,7 @@ finaliseHand();
 }
 function showScoreTally() {
 try {
+if (humanSeats().length > 0) showTutorialTip('firstScoreTally');
 _showScoreTallyInner();
 } catch (e) {
 console.error('showScoreTally error:', e);
@@ -8607,6 +8772,11 @@ return result;
 function renderPlayerZone() {
 if (!G || !G.nPlayers) return;
 const seat = G.hotSeatActive || 0;
+if (isHuman(seat)) {
+const myHandForTips = [...(G.handA[seat]||[]), ...(G.handB[seat]||[])];
+if (myHandForTips.length > 0) showTutorialTip('firstHand');
+if (myHandForTips.some(c => c.isJoker)) showTutorialTip('firstJoker');
+}
 const namEl = document.getElementById('player-name-tag');
 const teamCls = G.team1?.includes(seat)?'team1':G.team2?.includes(seat)?'team2':G.teamGreen?.includes(seat)?'team-green':'';
 namEl.textContent = SEAT_NAME(seat);
@@ -8944,6 +9114,7 @@ btn.style.display = show ? '' : 'none';
 btn.disabled = !enabled;
 };
 const inTrick = phase === 'trickplay';
+if (inTrick && isMyTurn && !G.currentSet && isHuman(seat)) showTutorialTip('firstLead');
 setBtn(btnPlay, true, inTrick && isMyTurn && (G.selected?.length > 0));
 btnPlay.disabled = !(inTrick && isMyTurn && G.selected?.length > 0);
 btnPlay.textContent = 'Play'; btnPlay.onclick = doPlay;
