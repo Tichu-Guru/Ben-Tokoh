@@ -94,7 +94,7 @@ body.net-client #net-stuck-btn{display:block;}
 #tip-callout-wrap{position:fixed;left:0;right:0;bottom:8px;z-index:1300;display:flex;justify-content:center;pointer-events:none;}
 .tip-callout{pointer-events:auto;max-width:340px;background:var(--gold2,#f0d080);color:#1a1428;border:2px solid var(--gold-dark,#9a7228);border-radius:10px;padding:10px 12px;box-shadow:0 4px 14px rgba(0,0,0,0.4);font-size:0.82rem;line-height:1.4;display:flex;gap:8px;align-items:flex-start;animation:tipIn 0.25s ease-out;}
 @keyframes tipIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.tip-callout-text{flex:1;}
+.tip-callout-text{flex:1;overflow-wrap:break-word;word-break:break-word;min-width:0;}
 .tip-callout-text b{display:block;margin-bottom:2px;font-family:'Rajdhani',sans-serif;}
 .tip-callout-close{background:none;border:none;font-size:1.1rem;line-height:1;color:#1a1428;cursor:pointer;opacity:0.6;padding:0 2px;}</style>
 </head>
@@ -105,7 +105,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v156</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v158</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -578,7 +578,7 @@ firstLead: { title:'Your turn to lead', body:"No one's beaten yet this trick —
 firstGrand: { title:'Grand declaration window', body:"You can stake VP on going out first, before seeing the rest of your hand. Higher risk, higher reward than declaring after passing — tap the ? button for full details." },
 firstAuction: { title:'Ready for Auction', body:"Passing is done — before you can play any cards, tap Ready for Auction to pick a Major Arcana card. Everyone needs to do this before trick play begins." },
 firstTrickEnd: { title:'Trick won', body:'Whoever played the highest set takes the trick and leads the next one. Cards they win stay with them for scoring at the end of the hand.' },
-firstScoreTally: { title:'Reading your results', body:"Each VP pool (Star/Arrow/Radioactive/TP/Declaration) is broken out separately here before being added into your total. Tap the ? button any time for what each one means." },
+firstScoreTally: { title:'Reading your results', body:"Each VP pool (Star / Arrow / Radioactive / TP / Declaration) is broken out separately here before being added into your total. Tap the ? button any time for what each one means." },
 firstJoker: { title:'A Joker!', body:'Jokers behave differently from normal cards — tap the ? button and see the Jokers section for what each one does.' }
 };
 function tutorialSeenSet() {
@@ -2993,7 +2993,7 @@ const warnEl = document.getElementById('gd-decl-warning');
 if (warnEl) { warnEl.textContent = ''; warnEl.classList.remove('visible'); }
 glog('Grand Window closed.', 'imp');
 if (G.useMA) {
-if (G.handNum === 1) {
+if (G.handNum === 1 || G.fixedTeams) {
 assignProvisionalTeams();
 G.teamBlue        = [...G.team1];
 G.teamRed         = [...G.team2];
@@ -3036,7 +3036,7 @@ return;
 if (n === 3) {
 const dhs = G.doubleHandSeat ?? 0;
 const others = allSeats().filter(s => s !== dhs);
-const blueLeader = others.reduce((a, b) => (G.totalVP[a]||0) >= (G.totalVP[b]||0) ? a : b);
+const blueLeader = G.fixedTeams ? others[0] : others.reduce((a, b) => (G.totalVP[a]||0) >= (G.totalVP[b]||0) ? a : b);
 G.team1 = others;
 G.team2 = [dhs];
 G.teamBlue = [...others];
@@ -5830,7 +5830,7 @@ btn.textContent = gameWinner !== undefined ? 'See Final Results' : 'Next Hand';
 btn.onclick = () => {
 modal.style.display = 'none';
 if (gameWinner !== undefined) showEndScreen();
-else if (G.useMA) beginPreDealTeamSelection();
+else if (G.useMA && !G.fixedTeams) beginPreDealTeamSelection();
 else dealHand();
 };
 }
