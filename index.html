@@ -105,7 +105,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v158</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v161</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -618,10 +618,10 @@ const ROLES = { Naga:'Naga', Garuda:'Garuda', Mulai:'Mulai', Anjing:'Anjing' };
 const MA_POOL = [
 {id:'Fool',     n:0,  t:'DuringTrick', fx:'fool',
 d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5★, play any illegal singleton into this trick. Cannot win.'},
-{id:'Magus',    n:1,  t:'DuringTrick', fx:'suitbonus', suit:'Clubs', d:'At Trick End: If Clubs in trick, trick winner gains 10▲︎.'},
-{id:'Priestess',n:2,  t:'DuringTrick', fx:'suitbonus', suit:'Hearts',   d:'At Trick End: If Hearts in trick, trick winner gains 10▲︎.'},
-{id:'Empress',  n:3,  t:'DuringTrick', fx:'suitbonus', suit:'Diamonds',  d:'At Trick End: If Diamonds in trick, trick winner gains 10▲︎.'},
-{id:'Emperor',  n:4,  t:'DuringTrick', fx:'suitbonus', suit:'Spades', d:'At Trick End: If Spades in trick, trick winner gains 10▲︎.'},
+{id:'Magus',    n:1,  t:'DuringTrick', fx:'suitbonus', suit:'Clubs', d:'At Trick End: +5▲︎ to whoever played each Clubs card in the trick.'},
+{id:'Priestess',n:2,  t:'DuringTrick', fx:'suitbonus', suit:'Hearts',   d:'At Trick End: +5▲︎ to whoever played each Hearts card in the trick.'},
+{id:'Empress',  n:3,  t:'DuringTrick', fx:'suitbonus', suit:'Diamonds',  d:'At Trick End: +5▲︎ to whoever played each Diamonds card in the trick.'},
+{id:'Emperor',  n:4,  t:'DuringTrick', fx:'suitbonus', suit:'Spades', d:'At Trick End: +5▲︎ to whoever played each Spades card in the trick.'},
 {id:'Sage',     n:5,  t:'DuringTrick', fx:'sage',      d:'DuringTrick: Choose ONE rank (8, 9, or 10) — that rank gains +4 this trick. Activate before playing your card.'},
 {id:'Lovers',       n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Heterosexual Lovers]'},
 {id:'LoversGM',     n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Gay Male Lovers]'},
@@ -637,8 +637,8 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'Alchemist',n:14, t:'PreDeal',     fx:'alchemist', d:'Before Team Selection: Exchange 1–3 of your Arcana Tableau cards with cards on the Auction Table.'},
 {id:'Tower',    n:16, t:'DuringTrick', fx:'tower',     d:'Court cards (Kn/Q/K) lose 7 ranks for singletons and groups this trick.'},
 {id:'Star',     n:17, t:'DuringTrick', fx:'starma',    d:'DuringTrick: Doubles all ★ Star VP scored from cards played this trick. Only activate when holding an Ace to play immediately after.'},
-{id:'Moon',     n:18, t:'DuringTrick', fx:'suitbonus', suit:'Moon',   d:'At Trick End: If Moon suit in trick, trick winner gains 10▲︎.'},
-{id:'Sun',      n:19, t:'DuringTrick', fx:'suitbonus', suit:'Sun',    d:'At Trick End: If Sun suit in trick, trick winner gains 10▲︎.'},
+{id:'Moon',     n:18, t:'DuringTrick', fx:'suitbonus', suit:'Moon',   d:'At Trick End: +5▲︎ to whoever played each Moon card in the trick.'},
+{id:'Sun',      n:19, t:'DuringTrick', fx:'suitbonus', suit:'Sun',    d:'At Trick End: +5▲︎ to whoever played each Sun card in the trick.'},
 {id:'Emergence',n:20, t:'DuringTrick', fx:'emergence', d:'DuringTrick: Reveals all players\' hands to the activating player only.'},
 {id:'Cosmos',   n:21, t:'DuringTrick', fx:'cosmos',    d:'Trick winner scores +6▲︎ per distinct suit in the trick.'},
 {id:'Pan',      n:15, t:'PreDeal',     fx:'pan',       d:'PreDeal: Form Orange Team with any non-lead player. Target receives +25 VP. Activator auto-declares GT at 1.5× stakes (success +150 VP / failure −150 VP to whole Orange Team).'},
@@ -1270,7 +1270,7 @@ let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, fixedTeams:fal
 let seatTypes = [];
 
 /* ══════════ ONLINE MULTIPLAYER — PHASE 1 (Networking Foundation) ══════════ */
-const NET = { mode:'local', peer:null, roomCode:null, joiners:[], hostConn:null, started:false, myName:'' };
+const NET = { mode:'local', peer:null, roomCode:null, joiners:[], hostConn:null, started:false, myName:'', _lastSeen:{} };
 const NET_PREFIX = 'bentokoh-';
 // Guard: while the client has a finger/mouse down on the table, hold off applying
 // incoming snapshots (which fully rebuild the DOM) so an in-progress tap/click can't
@@ -1367,17 +1367,16 @@ codeEl.textContent = code; codeEl.style.display='';
 const hint=document.getElementById('host-start-hint'); if(hint) hint.style.display='';
 netRenderHostLobby();
 });
-peer.on('connection', conn=>{
-conn.on('data', d=>netHostData(conn,d));
-conn.on('close', ()=>{
+function netHandleSeatGone(conn, reason){
 const seat = netSeatOfConn(conn);
 const who = NET.joiners.find(j=>j.conn===conn);
 NET.joiners = NET.joiners.filter(j=>j.conn!==conn);
 for (const k of Object.keys(NET.seatAssign)) if (NET.seatAssign[k].conn===conn) delete NET.seatAssign[k];
 if (seat!==null && NET.started && G && G.nPlayers){
 delete NET.remoteSeats[seat];
+delete NET._lastSeen?.[seat];
 if (G.netWaitSeat===seat) G.netWaitSeat=null;
-glog(`${netEsc(who?who.name:'Player')} disconnected — AI takes over their seat.`, 'imp');
+glog(`${netEsc(who?who.name:'Player')} ${reason} — AI takes over their seat.`, 'imp');
 if (G.phase==='trickplay' && G.activeSeat===seat && !G.bombInterrupt) setTimeout(()=>aiTakeTurn(seat), 800);
 if (G.phase==='passing' && G.passPending && !Object.keys(G.passPending[seat]||{}).length){
 try{ aiDoPassing(seat); }catch(e){ console.error(e); }
@@ -1385,7 +1384,7 @@ setTimeout(checkAllPassed, 300);
 }
 if (G.netTransfigSeat===seat){
 G.netTransfigSeat = null;
-glog(`${netEsc(who?who.name:'Player')} disconnected — Transfig card retained.`, 'imp');
+glog(`${netEsc(who?who.name:'Player')} ${reason} — Transfig card retained.`, 'imp');
 render(); netSendStates();
 }
 if (G.netPrompt && G.netPrompt.seat===seat){
@@ -1406,7 +1405,10 @@ setTimeout(gdAdvanceVPQueue, 500);
 render();
 }
 netRenderHostLobby(); netBroadcastLobby();
-});
+}
+peer.on('connection', conn=>{
+conn.on('data', d=>{ if (NET._lastSeen) NET._lastSeen[netSeatOfConn(conn)] = Date.now(); netHostData(conn,d); });
+conn.on('close', ()=>netHandleSeatGone(conn, 'disconnected'));
 conn.on('error', ()=>{});
 });
 peer.on('error', e=>{
@@ -1774,9 +1776,14 @@ stage = 2;
 netStatus('join-status','① Signaling ✓ → ② Contacting room '+code+'…');
 const conn = peer.connect(NET_PREFIX+code, {reliable:true});
 NET.hostConn = conn;
-conn.on('open', ()=>{ settled = true; conn.send({t:'hello', name}); netStatus('join-status','② Linked ✓ → ③ Connected! Waiting in lobby…','ok'); });
+conn.on('open', ()=>{
+settled = true; conn.send({t:'hello', name});
+netStatus('join-status','② Linked ✓ → ③ Connected! Waiting in lobby…','ok');
+clearInterval(NET._pingInterval);
+NET._pingInterval = setInterval(()=>{ try{ if (conn.open) conn.send({t:'ping'}); }catch(e){} }, 5000);
+});
 conn.on('data', d=>netClientData(d));
-conn.on('close', ()=>{ settled = true; netStatus('join-status','Disconnected from host.','err'); document.getElementById('online-wait-screen').classList.remove('open'); });
+conn.on('close', ()=>{ settled = true; clearInterval(NET._pingInterval); netStatus('join-status','Disconnected from host.','err'); document.getElementById('online-wait-screen').classList.remove('open'); });
 });
 peer.on('error', e=>{
 settled = true;
@@ -2287,9 +2294,27 @@ for (let i=1;i<n;i++) if (NET.seatAssign[i]) NET.remoteSeats[i] = NET.seatAssign
 NET.humanSeatsAtStart = [0, ...Object.keys(NET.remoteSeats).map(Number)];
 NET.startSeats = {};
 for (let i=1;i<n;i++) if (NET.seatAssign[i]) NET.startSeats[i] = NET.seatAssign[i].name;
+Object.keys(NET.remoteSeats).forEach(k => { NET._lastSeen[k] = Date.now(); });
 netBroadcast({t:'start'});
 if (NET.stateInterval) clearInterval(NET.stateInterval);
 NET.stateInterval = setInterval(netSendStates, 2000); // heartbeat covers phases that don't call render()
+if (NET.staleCheckInterval) clearInterval(NET.staleCheckInterval);
+// Safety net for disconnects the WebRTC 'close' event misses — a mobile app
+// killed or aggressively backgrounded rather than cleanly closed may never
+// fire 'close' at all. Clients ping every 5s regardless of whose turn it is;
+// if a remote seat goes quiet for 18s+, treat it as gone the same way a
+// clean disconnect would be handled.
+NET.staleCheckInterval = setInterval(()=>{
+if (NET.mode!=='host' || !NET.started) return;
+const now = Date.now();
+Object.keys(NET.remoteSeats).forEach(k => {
+const last = NET._lastSeen[k];
+if (last!=null && now-last > 18000){
+const conn = NET.remoteSeats[k];
+if (conn) netHandleSeatGone(conn, 'timed out');
+}
+});
+}, 4000);
 } else {
 for (let i=0;i<n;i++) {
 const name = document.getElementById('seat-name-'+i)?.value || (i===0?`Player ${i+1}`:`AI ${i+1}`);
@@ -5317,10 +5342,14 @@ glog(`Balance: condition not met (gap ${winnerVP - holderVP}▲︎) — card ret
 }
 }
 G.suitBonus.forEach(sb=>{
-if (cards.some(c=>c.suit===sb.suit)) {
-G.arrowVP[winner]=(G.arrowVP[winner]||0)+10;
-G.vp[winner]=(G.vp[winner]||0)+10;
-glog(`${SEAT_NAME_HTML(winner)} ${sb.suit} bonus (${sb.suit} activated by ${SEAT_NAME(sb.seat)}): +10▲︎.`,'good');
+const matchingPlays = (G.trickCards||[]).filter(tc => tc.card.suit === sb.suit);
+if (matchingPlays.length > 0) {
+matchingPlays.forEach(tc => {
+G.arrowVP[tc.seat] = (G.arrowVP[tc.seat]||0) + 5;
+G.vp[tc.seat] = (G.vp[tc.seat]||0) + 5;
+});
+const breakdown = matchingPlays.map(tc => `${SEAT_NAME(tc.seat)} +5▲︎`).join(', ');
+glog(`${sb.suit} bonus (activated by ${SEAT_NAME(sb.seat)}): ${breakdown}.`,'good');
 }
 });
 if (G.cosmosSeat!==null) {
@@ -5735,6 +5764,18 @@ glog(`${SEAT_NAME_HTML(firstOut)}: −${handRadioactivePen}☢︎ from ${handRad
 }
 }
 }
+// BZF cap: Star + Arrow + Radioactive combined is capped at +150 per player per
+// hand, so this VP system can't overshadow the rest of the scoring (TP,
+// Declaration VP). Only clips the positive side — a net-negative BZF total
+// (e.g. heavy Radioactive/King penalties) is left alone.
+allSeats().forEach(s => {
+const rawBzf = (G.starVP[s]||0) + (G.arrowVP[s]||0) + (G.radioactiveVP[s]||0);
+if (rawBzf > 150) {
+const excess = rawBzf - 150;
+G.vp[s] = (G.vp[s]||0) - excess;
+glog(`${SEAT_NAME_HTML(s)}: BZF VP capped at 150 (was ${rawBzf}).`, 'imp');
+}
+});
 applyFailedDeclarations();
 finaliseHand();
 }
@@ -5772,7 +5813,7 @@ const declLabel = decl==='grandTichu'
 const teamColor = G.team1.includes(s)?'color:var(--pas-team1)':
 G.team2.includes(s)?'color:var(--pas-team2)':
 G.teamGreen?.includes(s)?'color:var(--green)':'';
-const bzfVP = G.scoreMode==='bzf' ? ((G.arrowVP[s]||0)+(G.starVP[s]||0)+(G.radioactiveVP[s]||0)) : 0;
+const bzfVP = G.scoreMode==='bzf' ? Math.min(150, (G.arrowVP[s]||0)+(G.starVP[s]||0)+(G.radioactiveVP[s]||0)) : 0;
 const teamBonusVP = G.teamBonus[s]||0;
 const tpOnly = G.tpVP[s]||0;
 const handVP = tpOnly;
@@ -7708,7 +7749,7 @@ return false;
 });
 const bombCandidate = !candidate ? findAllBombs(hand).find(b =>
 b.cards.some(c => !c.isJoker && c.suit === ma.suit) &&
-(isLead || canFollow(b, G.currentSet))
+!isLead && canFollow(b, G.currentSet)
 ) : null;
 if (candidate) {
 const s = validateSet([candidate], currRankSB);
@@ -8421,11 +8462,11 @@ scroll.scrollLeft = scrollLeft;
 scroll.scrollTop  = scrollTop;
 }
 function render() {
-renderScoreBar();
-renderTableSeats();
-renderPlayerZone();
-renderCenterZone();
-updateActions();
+try{ renderScoreBar(); }catch(e){ console.error('renderScoreBar error:', e); }
+try{ renderTableSeats(); }catch(e){ console.error('renderTableSeats error:', e); }
+try{ renderPlayerZone(); }catch(e){ console.error('renderPlayerZone error:', e); }
+try{ renderCenterZone(); }catch(e){ console.error('renderCenterZone error:', e); }
+try{ updateActions(); }catch(e){ console.error('updateActions error:', e); }
 if (NET.mode==='host' && NET.started) netScheduleState();
 requestAnimationFrame(() => { updateFeltSize(); centerTableScroll(); });
 }
