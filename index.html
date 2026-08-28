@@ -105,7 +105,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v161</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v167</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -519,7 +519,8 @@ const HELP_SECTIONS = [
 <p><b>Goal:</b> be the first to empty your hand ("go out"). Each round you're dealt a hand; play continues in "tricks" until someone runs out of cards.</p>
 <p><b>Playing a trick:</b> the leader plays any legal set (a single card, a pair, a run, etc). Everyone after them must either play a <i>higher</i> set of the <b>same type and size</b>, or pass. The trick is won by whoever played the highest set; they lead the next trick.</p>
 <p><b>Selecting cards:</b> tap cards in your hand to select them, then tap Play. Tap Pass if you can't or don't want to beat the current play.</p>
-<p><b>Bombs</b> (four-of-a-kind, or specific special combos) can be played out of turn to interrupt play and beat almost anything.</p>`},
+<p><b>Bombs</b> (four-of-a-kind, or specific special combos) can be played out of turn to interrupt play and beat almost anything.</p>
+<p><b>Teams:</b> at setup you can choose Dynamic (teams may form or shift during play) or Fixed Teams (partnerships are locked to seat position for the whole game). This mainly matters if Major Arcana is on — see that section for how a few cards behave differently under Fixed Teams.</p>`},
 { id:'declarations', title:'Declarations', open:false, html:`
 <p>Before playing, you can stake bonus VP on a bold claim about how the hand will go:</p>
 <ul>
@@ -548,7 +549,13 @@ const HELP_SECTIONS = [
 </ul>`},
 { id:'majors', title:'Major Arcana', open:false, html:`
 <p>An optional layer that adds tarot-themed cards with one-time special effects — things like swapping cards, forming ad-hoc teams mid-game, or granting bonus VP for specific suits in a trick. If Major Arcana is off, you can ignore this section entirely.</p>
-<p>Major Arcana games add an auction phase before play, where these special cards get distributed, and (in some player counts) let teams form dynamically based on who ends up holding which cards.</p>`}
+<p>Major Arcana games add an auction phase before play, where these special cards get distributed.</p>
+<p><b>Lovers, Pan, and Hermit</b> work differently depending on your Teams setting:</p>
+<ul>
+<li><b>Dynamic Teams:</b> Lovers and Pan let the activator invite an unaffiliated player to form/join a team together (Pan also grants +25 VP to the target and auto-declares Grand Tokoh for the activator). Hermit locks in teams — remaining unaffiliated players, including the activator, become Solo — and also cancels Arrow VP for everyone that hand.</li>
+<li><b>Fixed Teams:</b> since partnerships can't change, these cards do something else instead. Lovers lets the activator pick an existing teammate — both of you score <b>double Arrow VP</b> that hand. Pan does the same double-VP pick, plus still auto-declares Grand Tokoh for the activator. Hermit cancels Arrow VP for everyone that hand (which also wipes out any Lovers/Pan doubling already set up).</li>
+</ul>
+<p>If you're chosen by more than one Lovers/Pan activation in the same hand, your Arrow VP is still only ever doubled once — it doesn't stack further.</p>`}
 ];
 function renderHelpSections() {
 const el = document.getElementById('help-sections');
@@ -629,7 +636,7 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'LoversTrans',  n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Transgender Lovers]'},
 {id:'Chariot',  n:7,  t:'DuringTrick', fx:'chariot',   d:'After playing 4+ cards all rank 1–5: that set cannot be beaten by non-Bombs.'},
 {id:'Strength', n:8,  t:'DuringTrick', fx:'strength',  d:'DuringTrick: Choose ONE rank (5, 6, or 7) — that rank gains +7 this trick. Activate before playing your card.'},
-{id:'Hermit',   n:9,  t:'PreDeal',     fx:'hermit',    d:'PreDeal: All remaining unaffiliated players (including activator) become Solo. Already-formed teams are preserved.'},
+{id:'Hermit',   n:9,  t:'PreDeal',     fx:'hermit',    d:'PreDeal: All remaining unaffiliated players (including activator) become Solo. Already-formed teams are preserved. Arrow VP does not score for anyone this hand.'},
 {id:'Fortune',  n:10, t:'DuringTrick', fx:'fortune',   d:'During your trick turn: rotate all Arcana Tableaux (including Fools) one seat clockwise or counter-clockwise. Takes effect immediately.'},
 {id:'Balance',  n:11, t:'DuringTrick', fx:'balance',   d:'During your trick turn: if the current trick winner has more than 100▲︎ Total VP above yours, they transfer 100▲︎ to you. Card stays if condition not met.'},
 {id:'HangedMan',n:12, t:'DuringTrick', fx:'hangman',   d:'Skip this trick entirely. You lead the next trick regardless of who wins.'},
@@ -800,7 +807,7 @@ render();
 function buildMADeck() {
 const cards = [];
 const teamFormingFx = ['lovers','hermit','pan'];
-const excludeTeamForming = (G.nPlayers <= 3 || G.fixedTeams) ? teamFormingFx : [];
+const excludeTeamForming = (G.nPlayers <= 3) ? teamFormingFx : [];
 const foolDef = MA_POOL.find(m=>m.id==='Fool');
 for (let i = 0; i < 9; i++) cards.push(newMACard(foolDef));
 for (const m of MA_POOL) {
@@ -3656,11 +3663,25 @@ processNextAffilPlayer();
 }
 function aiShouldActivateTeamMA(seat, card) {
 if (G.diff === 'easy') return false;
-if (card.ma.fx === 'hermit') return evaluateLaodaHand(seat) >= 0.65;
+const hermitShouldActivate = () => {
+const myTeamH = G.team1.includes(seat) ? G.team1 : G.team2.includes(seat) ? G.team2 : G.teamGreen?.includes(seat) ? G.teamGreen : [seat];
+const isSolo = G.affiliations[seat] === 'solo' || myTeamH.length <= 1;
+const maxOtherVP = Math.max(0, ...allSeats().filter(s => s !== seat).map(s => G.totalVP[s]||0));
+const isWinning = (G.totalVP[seat]||0) >= maxOtherVP;
+return isSolo || isWinning;
+};
+if (G.fixedTeams) {
+if (card.ma.fx === 'hermit') return hermitShouldActivate();
+const myTeamFT = G.team1.includes(seat) ? G.team1 : G.team2.includes(seat) ? G.team2 : G.teamGreen?.includes(seat) ? G.teamGreen : [seat];
+const validTargetsFT = myTeamFT.filter(s => s !== seat && !G.outOrder.includes(s));
+return validTargetsFT.length > 0;
+}
+if (card.ma.fx === 'hermit') return hermitShouldActivate();
 const validTargets = G.unaffiliatedSeats.filter(s => s !== seat);
 return validTargets.length > 0;
 }
 function resolvePreInviteMA(seat, card) {
+if (G.fixedTeams) { resolveFixedTeamsMA(seat, card); return; }
 const aff = G.affiliations[seat];
 if (card.ma.fx === 'hermit') {
 const toSolo = [...G.unaffiliatedSeats];
@@ -3669,18 +3690,13 @@ G.affiliations[s] = 'solo';
 if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
 });
 G.unaffiliatedSeats = [];
-glog(`${SEAT_NAME_HTML(seat)} plays Hermit — ${toSolo.map(s=>SEAT_NAME_HTML(s)).join(', ')} go Solo.`, 'imp');
+G.arrowDisabled = true;
+glog(`${SEAT_NAME_HTML(seat)} plays Hermit — ${toSolo.map(s=>SEAT_NAME_HTML(s)).join(', ')} go Solo. Arrow VP does not score for anyone this hand.`, 'imp');
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
 G.hermitActive = true;
 G.affilPlayerQueue = [];
 G.affilActivationsThisHand = G.nPlayers >= 5 ? 2 : 1;
-G.unaffiliatedSeats.forEach(s => {
-G.affiliations[s] = 'solo';
-if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
-});
-G.unaffiliatedSeats = [];
-glog(`${SEAT_NAME_HTML(seat)} activates Hermit — remaining unaffiliated go Solo.`, 'imp');
 G.affilActivationsThisHand++;
 advanceToDefaultTeamAssignment();
 return;
@@ -3748,6 +3764,56 @@ target => promptTarget(target)
 );
 } else {
 promptTarget(validTargets[0]);
+}
+}
+function resolveFixedTeamsMA(seat, card) {
+if (card.ma.fx === 'hermit') {
+G.arrowDisabled = true;
+glog(`${SEAT_NAME_HTML(seat)} activates Hermit — Arrow VP does not score for anyone this hand (cancels any Lovers/Pan doubling too).`, 'imp');
+G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
+G.maDiscard.push(card);
+G.affilActivationsThisHand++;
+render();
+processNextAffilPlayer();
+return;
+}
+const isPanFT = card.ma.fx === 'pan';
+const myTeamFT = G.team1.includes(seat) ? G.team1 : G.team2.includes(seat) ? G.team2 : G.teamGreen?.includes(seat) ? G.teamGreen : [seat];
+const validTargetsFT = myTeamFT.filter(s => s !== seat && !G.outOrder.includes(s));
+if (!validTargetsFT.length) {
+glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id}: no valid teammate to select — card retained.`, 'imp');
+processNextAffilPlayer();
+return;
+}
+const executeFT = (target) => {
+// Existence-guard, not a counter — being chosen by more than one Lovers/Pan
+// activation (from different teammates, or Lovers+Pan together) still only
+// doubles once, never stacks further.
+if (!G.arrowDoubleSeats) G.arrowDoubleSeats = [];
+if (!G.arrowDoubleSeats.includes(seat)) G.arrowDoubleSeats.push(seat);
+if (!G.arrowDoubleSeats.includes(target)) G.arrowDoubleSeats.push(target);
+if (isPanFT) {
+G.decl[seat] = 'grandTichu';
+recordGTDeclarer(seat, true);
+glog(`${SEAT_NAME_HTML(seat)} activates Pan — ${SEAT_NAME_HTML(seat)} and ${SEAT_NAME_HTML(target)} score double Arrow VP this hand. ${SEAT_NAME_HTML(seat)} also auto-declares Grand Tokoh (1.5× stakes: +150 VP success / −150 VP failure).`, 'imp');
+} else {
+glog(`${SEAT_NAME_HTML(seat)} activates Lovers — ${SEAT_NAME_HTML(seat)} and ${SEAT_NAME_HTML(target)} score double Arrow VP this hand.`, 'imp');
+}
+G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
+G.maDiscard.push(card);
+render();
+G.affilActivationsThisHand++;
+processNextAffilPlayer();
+};
+if (isHuman(seat)) {
+showChoice(
+`${card.ma.id} — Choose Teammate`,
+`Choose a teammate — you and they will both score double Arrow VP this hand${isPanFT ? ', and you will auto-declare Grand Tokoh' : ''}:`,
+validTargetsFT.map(s => ({ label: `${SEAT_NAME_HTML(s)} (${G.totalVP[s]||0} VP)`, value: s })),
+target => executeFT(target)
+);
+} else {
+executeFT(validTargetsFT[0]);
 }
 }
 function affiliateWith(inviterSeat, targetSeat, inviterAff) {
@@ -5051,7 +5117,7 @@ G.towerOn = false; G.chariotLock = false;
 G.balanceSeat = null;
 G.foolActive = false; G.foolSeat = null;
 G.foolPlayedThisTrick = false; G.foolPlayedCardIds = new Set();
-G.starDoubleOn = false; G.suitBonus = [];
+G.starDoubleOn = false; G.suitBonus = []; G.arrowDoubleSeats = []; G.arrowDisabled = false;
 G.cosmosSeat = null;
 G.selected = [];
 if (G.phase === 'scoring') return;
@@ -5725,6 +5791,7 @@ if (G.scoreMode === 'bzf') {
 // Teams smaller than 2 (e.g. 3P's solo double-hand seat) are intentionally
 // excluded from Arrow VP entirely — solo players neither earn nor suffer
 // Arrow-type card values (including King's negative pool contribution).
+if (!G.arrowDisabled) {
 const allTeams = [G.team1, G.team2, G.teamGreen].filter(t => t && t.length >= 2);
 allTeams.forEach(team => {
 const teamWentOut = team.filter(s => G.outOrder.includes(s));
@@ -5736,11 +5803,15 @@ pool += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow)
 });
 if (pool === 0) return;
 team.forEach(s => {
-G.arrowVP[s] = (G.arrowVP[s]||0) + pool;
-G.vp[s] = (G.vp[s]||0) + pool;
+const doubled = (G.arrowDoubleSeats||[]).includes(s);
+const amount = doubled ? pool * 2 : pool;
+G.arrowVP[s] = (G.arrowVP[s]||0) + amount;
+G.vp[s] = (G.vp[s]||0) + amount;
 });
-glog(`Team [${team.map(SEAT_NAME).join('+')}] Arrow pool: +${pool}▲︎ each.`);
+const poolBreakdown = team.map(s => (G.arrowDoubleSeats||[]).includes(s) ? `${SEAT_NAME(s)} +${pool*2} (doubled)` : `${SEAT_NAME(s)} +${pool}`).join(', ');
+glog(`Team [${team.map(SEAT_NAME).join('+')}] Arrow pool: ${poolBreakdown}.`);
 });
+}
 allSeats().forEach(s => {
 if (!G.outOrder.includes(s)) return; // Radioactive VP only scores for players who went out
 const radioactiveCards = (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isRadioactive);
@@ -6164,7 +6235,7 @@ const pairRanks=Object.entries(remFreq).filter(([,v])=>v.length>=2).map(([r])=>+
 for(let i=0;i<pairRanks.length-1;i++) if(pairRanks[i+1]===pairRanks[i]+1) return true;
 return false;
 });
-if (!pagesInSeqDouble) {
+if (!pagesInSeqDouble && hasLowSingleton) {
 const pageSingles = candidates.filter(c=>c.isSingle&&c.cards[0].rank===11);
 if (pageSingles.length) return pageSingles;
 }
@@ -6193,6 +6264,49 @@ if (canGoOutWith(c)) return true;
 if (canGoOutNextLead(c)) return true;
 return false;
 });
+// Topper preservation (medium/hard only — this whole function already exits
+// for easy above): don't burn a meld containing 2+ Toppers (Naga, Garuda, or
+// natural King — matching the Topper definition already used for Anjing
+// decisions) unless playing it goes out now or guarantees going out next lead.
+// Applies regardless of declaration status — the cost of losing this is worse
+// for a seat with a live T/GT declaration, but the risk itself isn't limited
+// to declared seats.
+candidates = candidates.filter(c => {
+const topperCount = c.cards.filter(card =>
+card.role === ROLES.Naga || card.role === ROLES.Garuda || (!card.isJoker && card.rank === 14)
+).length;
+if (topperCount < 2) return true;
+if (canGoOutWith(c)) return true;
+if (canGoOutNextLead(c)) return true;
+return false;
+});
+// Hard only: perfect-info check — protect a meld even below Topper rank if it's
+// genuinely the highest remaining group of its size across ALL hands, not just
+// this AI's own. A pair of Knights is NOT worth protecting if another seat
+// holds a pair of Kings (or better) — that pair is beatable by the field
+// regardless, so there's nothing to safeguard.
+if (diff === 'hard') {
+candidates = candidates.filter(c => {
+const rankCounts2 = {};
+c.cards.forEach(card => { if (!card.isJoker) rankCounts2[card.rank] = (rankCounts2[card.rank]||0) + 1; });
+const highGroups = Object.entries(rankCounts2).filter(([,cnt]) => cnt >= 2);
+if (!highGroups.length) return true;
+const isBeatableByField = highGroups.some(([rankStr, cnt]) => {
+const rank = Number(rankStr);
+return allSeats().some(s => {
+if (s === seat || G.outOrder.includes(s)) return false;
+const theirNats = (G.handA[s]||[]).filter(x=>!x.isJoker && !x.isMajorArcana);
+const theirFreq = {};
+theirNats.forEach(x=>{ theirFreq[x.rank]=(theirFreq[x.rank]||0)+1; });
+return Object.entries(theirFreq).some(([tr,tc]) => Number(tr) > rank && tc >= cnt);
+});
+});
+if (isBeatableByField) return true;
+if (canGoOutWith(c)) return true;
+if (canGoOutNextLead(c)) return true;
+return false;
+});
+}
 if (hasLowSingleton) {
 const filtered = candidates.filter(c => {
 if (canGoOutWith(c)) return true;
@@ -7858,6 +7972,10 @@ if (diff === 'easy') break;
 if (G.trickLeader === seat) break;
 if ((G.trickCards||[]).some(tc => tc.seat === seat)) break;
 if (!G.currentSet) break;
+if (G.mulaiWished && !G.currentSet.isBomb) {
+const wishedCardsHM = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === G.mulaiWished);
+if (wishedCardsHM.length && canFulfillWish(hand, wishedCardsHM, G.currentSet)) break;
+}
 {
 const aiDeclaredGT = G.decl[seat]==='grandTichu'||G.decl[seat]==='tichu';
 const oppWinning = G.trickWinner !== null && !myTeam.includes(G.trickWinner);
@@ -7986,6 +8104,13 @@ glog(`HangedMan must be activated before playing any card this trick.`, 'bad'); 
 }
 if (!G.currentSet) {
 glog(`HangedMan cannot be activated before any card has been led.`, 'bad'); return;
+}
+if (G.mulaiWished && !G.currentSet.isBomb) {
+const handHM = [...(G.handA[seat]||[]), ...(G.handB[seat]||[])];
+const wishedCardsHM = handHM.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === G.mulaiWished);
+if (wishedCardsHM.length && canFulfillWish(handHM, wishedCardsHM, G.currentSet)) {
+glog(`HangedMan cannot be activated — Mulai's wish forces you to play this trick.`, 'bad'); return;
+}
 }
 }
 function consumeMA() {
