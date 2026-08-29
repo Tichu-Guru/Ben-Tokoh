@@ -105,7 +105,7 @@ body.net-client #net-stuck-btn{display:block;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v167</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v171</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -1344,36 +1344,6 @@ document.getElementById('online-wait-screen')?.classList.remove('open');
 }
 
 /* ── HOST SIDE ── */
-function netInitHost(attempt){
-if (typeof Peer === 'undefined'){
-netStatus('host-room-status','Loading network library…');
-window._peerRetryLoad(ok=>{
-if (NET.mode!=='host') return;
-if (ok) netInitHost(attempt);
-else netStatus('host-room-status','Could not load the network library from any source — your network may be blocking CDN scripts.','err');
-});
-return;
-}
-attempt = attempt||0;
-if (attempt > 4){ netStatus('host-room-status','Could not reserve a room code — try again later.','err'); return; }
-const code = netRoomCode();
-netStatus('host-room-status','① Reaching signaling service…');
-const peer = new Peer(NET_PREFIX + code);
-NET.peer = peer;
-let hostSettled = false;
-setTimeout(()=>{
-if (!hostSettled && NET.peer===peer)
-netStatus('host-room-status','✕ Could not reach the signaling service (step ①) after 15 seconds — a browser extension, security software, or a sandboxed viewer may be blocking it. Try another browser or check extensions.','err');
-}, 15000);
-peer.on('open', ()=>{
-hostSettled = true;
-NET.roomCode = code;
-netStatus('host-room-status','① Signaling ✓ — Room open! Share this code with your friends:','ok');
-const codeEl=document.getElementById('host-room-code');
-codeEl.textContent = code; codeEl.style.display='';
-const hint=document.getElementById('host-start-hint'); if(hint) hint.style.display='';
-netRenderHostLobby();
-});
 function netHandleSeatGone(conn, reason){
 const seat = netSeatOfConn(conn);
 const who = NET.joiners.find(j=>j.conn===conn);
@@ -1413,6 +1383,36 @@ render();
 }
 netRenderHostLobby(); netBroadcastLobby();
 }
+function netInitHost(attempt){
+if (typeof Peer === 'undefined'){
+netStatus('host-room-status','Loading network library…');
+window._peerRetryLoad(ok=>{
+if (NET.mode!=='host') return;
+if (ok) netInitHost(attempt);
+else netStatus('host-room-status','Could not load the network library from any source — your network may be blocking CDN scripts.','err');
+});
+return;
+}
+attempt = attempt||0;
+if (attempt > 4){ netStatus('host-room-status','Could not reserve a room code — try again later.','err'); return; }
+const code = netRoomCode();
+netStatus('host-room-status','① Reaching signaling service…');
+const peer = new Peer(NET_PREFIX + code);
+NET.peer = peer;
+let hostSettled = false;
+setTimeout(()=>{
+if (!hostSettled && NET.peer===peer)
+netStatus('host-room-status','✕ Could not reach the signaling service (step ①) after 15 seconds — a browser extension, security software, or a sandboxed viewer may be blocking it. Try another browser or check extensions.','err');
+}, 15000);
+peer.on('open', ()=>{
+hostSettled = true;
+NET.roomCode = code;
+netStatus('host-room-status','① Signaling ✓ — Room open! Share this code with your friends:','ok');
+const codeEl=document.getElementById('host-room-code');
+codeEl.textContent = code; codeEl.style.display='';
+const hint=document.getElementById('host-start-hint'); if(hint) hint.style.display='';
+netRenderHostLobby();
+});
 peer.on('connection', conn=>{
 conn.on('data', d=>{ if (NET._lastSeen) NET._lastSeen[netSeatOfConn(conn)] = Date.now(); netHostData(conn,d); });
 conn.on('close', ()=>netHandleSeatGone(conn, 'disconnected'));
@@ -3496,6 +3496,13 @@ const el = document.getElementById('ts-log');
 if (el) el.innerHTML = msg;
 tsRenderVPStrip(G.hotSeatActive ?? -1);
 }
+function beginPreDealTeamSelectionFixed() {
+G.phase = 'teamselection';
+G._teamSelectionContext = 'preDeal';
+G.bsAtTeamSelectionStart = allSeats().map(s => [...(G.bs[s]||[])]);
+G.affilActivationsThisHand = 0;
+advanceToPreInviteMA();
+}
 function beginPreDealTeamSelection() {
 G.phase = 'teamselection';
 G.bidRanking = [];
@@ -3779,7 +3786,7 @@ return;
 }
 const isPanFT = card.ma.fx === 'pan';
 const myTeamFT = G.team1.includes(seat) ? G.team1 : G.team2.includes(seat) ? G.team2 : G.teamGreen?.includes(seat) ? G.teamGreen : [seat];
-const validTargetsFT = myTeamFT.filter(s => s !== seat && !G.outOrder.includes(s));
+const validTargetsFT = myTeamFT.filter(s => s !== seat);
 if (!validTargetsFT.length) {
 glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id}: no valid teammate to select — card retained.`, 'imp');
 processNextAffilPlayer();
@@ -5943,6 +5950,7 @@ btn.onclick = () => {
 modal.style.display = 'none';
 if (gameWinner !== undefined) showEndScreen();
 else if (G.useMA && !G.fixedTeams) beginPreDealTeamSelection();
+else if (G.useMA && G.fixedTeams) beginPreDealTeamSelectionFixed();
 else dealHand();
 };
 }
@@ -7209,8 +7217,10 @@ const cukongCeiling = mustAvoidFirstOut && noOneOut;
 const gtSupportCeiling = diff === 'hard' && hasGTTeammate && noOneOut;
 const rankCeiling = cukongCeiling || gtSupportCeiling;
 const gtTeammatePassed = gtTeammate !== undefined && G.trickPassed[gtTeammate];
+const gtTeammatePassedThisMeld = gtTeammate !== undefined && curr &&
+G.gtDeclPassedTypes[gtTeammate]?.[curr.type] === true;
 const hardException = diff === 'hard' && hasGTTeammate && opponentWinning &&
-gtTeammatePassed && noOneOut;
+(gtTeammatePassed || gtTeammatePassedThisMeld) && noOneOut;
 const gcTeammate = myTeam.find(s =>
 s !== seat && !G.outOrder.includes(s) &&
 (G.decl[s] === 'cukong' || G.decl[s] === 'grandCukong') &&
