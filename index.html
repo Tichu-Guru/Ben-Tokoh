@@ -117,7 +117,7 @@ body:has(#game-screen.active) #table-zoom-ctrl{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v176</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v177</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -4726,7 +4726,8 @@ const ids = new Set(cards.map(c=>c.id));
 G.handA[seat] = G.handA[seat].filter(c=>!ids.has(c.id));
 G.hasPlayedCard[seat] = true;
 G.selected = [];
-if (G.currentSet && !set.isBomb && !set.isAnjing) {
+const isFoolPlayCheck = cards.length === 1 && G.foolPlayedCardIds.has(cards[0].id);
+if (G.currentSet && !set.isBomb && !set.isAnjing && !isFoolPlayCheck) {
 if (!canFollow(set, G.currentSet)) {
 glog(`BUG: ${SEAT_NAME_HTML(seat)} played ${set.type}(${set.rank}) but cannot beat ${G.currentSet.type}(${G.currentSet.rank})`, 'bad');
 }
@@ -4753,7 +4754,7 @@ if (G.trickPlayIdx === undefined) G.trickPlayIdx = 0;
 G.trickCards.push(...cards.map(c=>({seat, card:c, grp:G.trickPlayIdx})));
 G.trickPlayIdx++;
 G.playedCards.push(...cards);
-const isFoolPlay = cards.length === 1 && G.foolPlayedCardIds.has(cards[0].id);
+const isFoolPlay = isFoolPlayCheck;
 if (!isFoolPlay) {
 G.currentSet = set;
 G.currentTrickRank = set.rank;
