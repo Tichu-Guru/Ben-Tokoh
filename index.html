@@ -121,7 +121,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v185</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v190</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -744,7 +744,7 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'LoversGM',     n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Gay Male Lovers]'},
 {id:'LoversLes',    n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Lesbian Lovers]'},
 {id:'LoversTrans',  n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Transgender Lovers]'},
-{id:'Chariot',  n:7,  t:'DuringTrick', fx:'chariot',   d:'After playing 4+ cards all rank 1–5: that set cannot be beaten by non-Bombs.'},
+{id:'Chariot',  n:7,  t:'DuringTrick', fx:'chariot',   d:'After playing 4+ cards all rank 0–5: that set cannot be beaten by non-Bombs.'},
 {id:'Strength', n:8,  t:'DuringTrick', fx:'strength',  d:'DuringTrick: Choose ONE rank (5, 6, or 7) — that rank gains +7 this trick. Activate before playing your card.'},
 {id:'Hermit',   n:9,  t:'PreDeal',     fx:'hermit',    d:'PreDeal: All remaining unaffiliated players (including activator) become Solo. Already-formed teams are preserved. Arrow VP does not score for anyone this hand.'},
 {id:'Fortune',  n:10, t:'DuringTrick', fx:'fortune',   d:'During your trick turn: rotate all Arcana Tableaux (including Fools) one seat clockwise or counter-clockwise. Takes effect immediately.'},
@@ -7205,6 +7205,94 @@ if (!allRankPlayed(r)) return r;
 }
 return 1;
 }
+// --- Hard-difficulty bomb restraint: topper detection helpers ---
+// A "topper" is a specific meld (type+length+rank) that no other active hand at the
+// table can naturally beat (bombs always beat any non-bomb topper).
+function extractCandidateMelds(hand) {
+const nats = (hand||[]).filter(c => !c.isJoker && !c.isMajorArcana);
+const out = [];
+nats.forEach(c => out.push({type:'Single', len:1, topRank:c.rank}));
+const byRank = {};
+nats.forEach(c => { (byRank[c.rank] = byRank[c.rank]||[]).push(c); });
+Object.keys(byRank).forEach(rank => {
+const r = Number(rank), cs = byRank[rank];
+if (cs.length >= 2) out.push({type:'Pair', len:2, topRank:r});
+if (cs.length >= 3) out.push({type:'Triple', len:3, topRank:r});
+});
+const uniqRanks = Object.keys(byRank).map(Number).sort((a,b)=>a-b);
+for (let i = 0; i < uniqRanks.length; i++) {
+let run = [uniqRanks[i]];
+for (let j = i+1; j < uniqRanks.length; j++) {
+if (uniqRanks[j] === run[run.length-1] + 1) run.push(uniqRanks[j]);
+else break;
+}
+if (run.length >= 5) {
+for (let len = 5; len <= run.length; len++) {
+for (let start = 0; start + len <= run.length; start++) {
+out.push({type:'Straight', len, topRank: run[start+len-1]});
+}
+}
+}
+}
+const pairRanks = uniqRanks.filter(r => byRank[r].length >= 2);
+for (let i = 0; i < pairRanks.length; i++) {
+let run = [pairRanks[i]];
+for (let j = i+1; j < pairRanks.length; j++) {
+if (pairRanks[j] === run[run.length-1] + 1) run.push(pairRanks[j]);
+else break;
+}
+if (run.length >= 2) {
+for (let len = 2; len <= run.length; len++) {
+for (let start = 0; start + len <= run.length; start++) {
+out.push({type:'SeqDoubles', len: len*2, topRank: run[start+len-1]});
+}
+}
+}
+}
+const tripleRanks = uniqRanks.filter(r => byRank[r].length >= 3);
+for (let i = 0; i < tripleRanks.length; i++) {
+let run = [tripleRanks[i]];
+for (let j = i+1; j < tripleRanks.length; j++) {
+if (tripleRanks[j] === run[run.length-1] + 1) run.push(tripleRanks[j]);
+else break;
+}
+if (run.length >= 2) {
+for (let len = 2; len <= run.length; len++) {
+for (let start = 0; start + len <= run.length; start++) {
+out.push({type:'SeqTriples', len: len*3, topRank: run[start+len-1]});
+}
+}
+}
+}
+return out;
+}
+function meldBeatableByHand(meld, otherHand) {
+return extractCandidateMelds(otherHand).some(c => c.type === meld.type && c.len === meld.len && c.topRank > meld.topRank);
+}
+function isUnbeatableByOthers(meld, holderSeat) {
+return allSeats().filter(s => s !== holderSeat && !G.outOrder.includes(s))
+.every(s => !meldBeatableByHand(meld, G.handA[s]||[]));
+}
+function hasStandingLeadTool(handArr) {
+return (handArr||[]).some(c => c.role === ROLES.Naga || c.role === ROLES.Garuda || (!c.isJoker && !c.isMajorArcana && c.rank === 14))
+|| findAllBombs(handArr||[]).length > 0;
+}
+function arrowVPOfCards(cards) {
+return (cards||[]).reduce((s,c) => s + (!c.isJoker && c.isArrow ? (c.rank===5?10:c.rank===14?-10:5) : 0), 0);
+}
+function tpVPOfCards(cards) {
+let pts = 0;
+(cards||[]).forEach(c => {
+if (c.role === ROLES.Naga) pts += 25;
+if (c.role === ROLES.Garuda) pts -= 25;
+if (!c.isJoker) {
+if (c.rank === 4) pts += 5;
+if (c.rank === 10) pts += 10;
+if (c.rank === 13 && !c.isDuplicate) pts += 10;
+}
+});
+return pts;
+}
 function aiRespond(seat) {
 const hand = G.handA[seat];
 const curr = G.currentSet;
@@ -7515,6 +7603,34 @@ return s && canFollow(s, curr);
 });
 if (!canBeatNaturally) {
 const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
+// Hard: reserve bombs unless a specific trigger justifies spending one now —
+// declaration block, high Arrow/TP value in this trick, or denying an otherwise-
+// unreachable monster meld the opponent would unlock by taking the lead. Absent
+// those, only bomb if this is genuinely the opponent's LAST topper.
+let hardShouldBomb = true;
+if (diff === 'hard' && !curr.isBomb) {
+const oppSeat = G.trickWinner;
+const oppHand = G.handA[oppSeat] || [];
+const oppDeclLive = !G.outOrder.includes(oppSeat) &&
+(G.decl[oppSeat]==='tichu'||G.decl[oppSeat]==='grandTichu') && isDeclDoable(oppSeat);
+const trickTP = tpVPOfCards(curr.cards);
+const trickArrowVP = arrowVPOfCards(curr.cards);
+const oppOtherToppers = extractCandidateMelds(oppHand).filter(m => isUnbeatableByOthers(m, oppSeat));
+const oppHasStandingTool = hasStandingLeadTool(oppHand);
+const denyMonsterSet = oppOtherToppers.length > 0 && !oppHasStandingTool;
+const arrowTrigger = myTeam.length > 1 && trickArrowVP > 50;
+const tpTrigger = trickTP > 50;
+const currMeld = {type: curr.type, len: curr.len || curr.cards?.length || 1, topRank: curr.topRank||curr.rank};
+const currIsTopper = isUnbeatableByOthers(currMeld, oppSeat);
+// Declaration block only applies when this play is a genuine topper (unbeatable table-wide) —
+// not merely a play the responding AI itself happens to lack a natural answer for.
+if ((oppDeclLive && currIsTopper) || arrowTrigger || tpTrigger || denyMonsterSet) {
+hardShouldBomb = true;
+} else {
+hardShouldBomb = currIsTopper && oppOtherToppers.length === 0;
+}
+}
+if (hardShouldBomb) {
 // GC/C declared: blocking an opponent's GT/T is smart, but if this bomb would empty
 // our hand (forcing us to go out 1st), we need Anjing/Fool in the REMAINING hand
 // to redirect the lead to an undeclared teammate instead of going out ourselves.
@@ -7535,6 +7651,16 @@ playCards(seat, best.cards, best); return;
 } else {
 playCards(seat, best.cards, best); return;
 }
+}
+}
+} else if (diff === 'hard' && teammateWinning && !curr.isBomb &&
+(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.75)) {
+// Cutthroat: chase down the team's own near-goal leader if this trick is valuable enough.
+const trickTP = tpVPOfCards(curr.cards);
+if (trickTP > 50) {
+const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
+glog(`${SEAT_NAME_HTML(seat)} bombs teammate's high-value trick (Cutthroat).`, 'imp');
+playCards(seat, best.cards, best); return;
 }
 }
 }
@@ -7813,15 +7939,21 @@ bestResponse={cards:withPx,set:s};
 }
 // Rescue bombing: if a GT/T-declaring teammate is at risk of losing the trick to an
 // opponent, bomb to take it back — regardless of the rescuer's own declaration (or lack
-// thereof). Supporting a teammate's higher-priority GT/T outranks self-conservation.
+// thereof). Supporting a teammate's higher-priority GT/T outranks self-conservation,
+// unless Cutthroat is active (a teammate has crossed 75% of the VP goal) and this trick's
+// own TP/Arrow value is high enough that capturing it for self-interest wins out instead.
 if (!bestResponse && opponentWinning && hasGTTeammate && curr && !curr.isBomb) {
 const rescueBombs = findAllBombs(hand).filter(b => canFollow(b, curr));
 if (rescueBombs.length) {
+const cutthroatActive = diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.75));
+const selfInterestWins = cutthroatActive && (tpVPOfCards(curr.cards) > 50 || arrowVPOfCards(curr.cards) > 50);
+if (!selfInterestWins) {
 const weakestRescueBomb = rescueBombs.reduce((a,b) =>
 (b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a
 );
 glog(`${SEAT_NAME_HTML(seat)} bombs to rescue teammate's GT/T from ${SEAT_NAME_HTML(G.trickWinner)}!`, 'imp');
 playCards(seat, weakestRescueBomb.cards, weakestRescueBomb); return;
+}
 }
 }
 if (!bestResponse && opponentWinning && curr && curr.type === 'Single' && !curr.isBomb) {
@@ -8558,7 +8690,7 @@ const faceRankName = towerReduced
 : (RANK_NAME[card.rank] || String(card.rank));
 const isWide = !card.isJoker && (RANK_NAME[card.rank]||String(card.rank)).length >= 2;
 const faceRank = card.isJoker
-? `<span class="bzf-c-big-rank bzf-rainbow">${roleLabel(card.role)}</span><span class="bzf-c-big-suit bzf-rainbow">${icon}</span>`
+? `<span class="bzf-c-big-rank bzf-rainbow">${card.role===ROLES.Mulai?'M':roleLabel(card.role)}</span><span class="bzf-c-big-suit bzf-rainbow">${icon}</span>`
 : `<span class="bzf-c-big-rank${isWide?' wide':''}">${faceRankName}</span><span class="bzf-c-big-suit">${icon}</span>`;
 let vpDisplay, vpStripStyle, vpFaceStyle;
 if (!card.isJoker && (card.rank === 4 || card.rank === 10 || (card.rank === 13 && !card.isDuplicate))) {
@@ -8872,6 +9004,7 @@ token.className = 'seat-token';
 token.id = 'seat-token-' + seat;
 const myTeam = G.team1?.includes(seat) ? 'team1' : G.team2?.includes(seat) ? 'team2' :
 G.teamGreen?.includes(seat) ? 'team-green' :
+G.teamYellow?.includes(seat) ? 'team4' :
 (G.soloSeats?.includes(seat) ? 'solo' : '');
 const isActive = seat === G.activeSeat;
 const isDoubleHand = seat === G.doubleHandSeat || (G.nPlayers === 2);
