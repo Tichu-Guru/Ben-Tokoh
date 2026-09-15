@@ -121,7 +121,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v205</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v219</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -345,7 +345,9 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
           <th style="padding:4px 4px;text-align:center;">DECL(C)</th>
           <th style="padding:4px 4px;text-align:right;">Team</th>
           <th style="padding:4px 4px;text-align:right;" title="Tokoh Points">TP</th>
-          <th style="padding:4px 4px;text-align:right;">BZF</th>
+          <th style="padding:4px 4px;text-align:right;" title="Star VP">★</th>
+          <th style="padding:4px 4px;text-align:right;" title="Arrow VP">▲</th>
+          <th style="padding:4px 4px;text-align:right;" title="Radioactive VP">☢</th>
           <th style="padding:4px 4px;text-align:right;">Hand</th>
           <th style="padding:4px 4px;text-align:right;">Total</th>
 
@@ -571,7 +573,7 @@ const HELP_SECTIONS = [
 <p><b>Lovers, Pan, and Hermit</b> work differently depending on your Teams setting:</p>
 <ul>
 <li><b>Dynamic Teams:</b> Lovers and Pan let the activator invite an unaffiliated player to form/join a team together (Pan also grants +25 VP to the target and auto-declares Grand Tokoh for the activator). Hermit locks in teams — remaining unaffiliated players, including the activator, become Solo — and also cancels Arrow VP for everyone that hand.</li>
-<li><b>Fixed Teams:</b> since partnerships can't change, these cards do something else instead. Lovers lets the activator pick an existing teammate — both of you score <b>double Arrow VP</b> that hand. Pan does the same double-VP pick, plus still auto-declares Grand Tokoh for the activator. Hermit cancels Arrow VP for everyone that hand (which also wipes out any Lovers/Pan doubling already set up).</li>
+<li><b>Fixed Teams:</b> since partnerships can't change, these cards do something else instead. Lovers lets the activator pick an existing teammate — your combined captured Arrow VP is shared privately between just the two of you that hand, rather than pooled with everyone else. Pan does the same private split, plus still auto-declares Grand Tokoh for the activator.</li>
 </ul>
 <p>If you're chosen by more than one Lovers/Pan activation in the same hand, your Arrow VP is still only ever doubled once — it doesn't stack further.</p>`}
 ];
@@ -2259,8 +2261,8 @@ if (typeof G[k] === 'function') continue;
 out[k] = netPack(G[k]);
 }
 // Hidden information: other seats' hands masked (length preserved), MA deck masked, selection cleared
-// Exception: Emergence arcana reveals all hands to all players by rule
-const revealAll = !!G.emergenceRevealed;
+// Emergence reveals all hands, but only to the seat that activated it (per the card's own text).
+const revealAll = !!G.emergenceRevealed && forSeat === G.emergenceActivatorSeat;
 out.handA = G.handA.map((h,sIdx)=> (sIdx===forSeat||revealAll) ? netPack(h) : h.map((_,i)=>netMaskCard(sIdx,'A'+i)));
 out.handB = G.handB.map((h,sIdx)=> (sIdx===forSeat||revealAll) ? netPack(h) : h.map((_,i)=>netMaskCard(sIdx,'B'+i)));
 out.maDeck = (G.maDeck||[]).map((_,i)=>netMaskCard('deck',i));
@@ -2373,7 +2375,7 @@ function updateAltVPHint() {
 const hint = document.getElementById('alt-vp-hint');
 if (!hint) return;
 const goal = startConfig.vpGoal || 1000;
-const cutthroat = Math.floor(goal * 0.75);
+const cutthroat = Math.floor(goal * 0.65);
 hint.textContent = `Win at ${goal}▲︎ · Hard cutthroat at ${cutthroat}▲︎`;
 }
 function renderSeatConfig() {
@@ -2555,6 +2557,7 @@ suitBonus: [],
 cosmosSeat: null,
 starDoubleOn: false,
 emergenceRevealed: false,
+emergenceActivatorSeat: null,
 emergenceSeat: null,
 foolActive: false,
 foolCard: null,
@@ -2663,7 +2666,7 @@ G.firstCDeclarer    = Array(G.nPlayers).fill(null);
 G.sageRanks    = new Set(); G.strengthRanks = new Set();
 G.towerOn = false; G.chariotLock = false;
 G.suitBonus = []; G.cosmosSeat = null; G.balanceSeat = null;
-G.starDoubleOn = false; G.emergenceRevealed = false;
+G.starDoubleOn = false; G.emergenceRevealed = false; G.emergenceActivatorSeat = null;
 G.foolActive = false; G.hangmanSeat = null; G.hangmanSeatConsumed = false;
 G.foolPlayedThisTrick = false; G.foolPlayedCardIds = new Set();
 G.leadPassMode = null;
@@ -2807,7 +2810,7 @@ if (core >= 2 && G.nPlayers !== 2) {
 const myTeam = G.team1?.includes(seat)?G.team1:G.team2?.includes(seat)?G.team2:G.teamGreen?.includes(seat)?G.teamGreen:[];
 const teamGCCount = myTeam.filter(s => s !== seat &&
 (G.decl[s]==='grandCukong'||G.decl[s]==='cukong')).length;
-const cutthroat = G.diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.75));
+const cutthroat = G.diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65));
 if (teamGCCount < myTeam.length - 1 || cutthroat) return 'grandCukong';
 }
 return null;
@@ -3178,7 +3181,14 @@ const warnEl = document.getElementById('gd-decl-warning');
 if (warnEl) { warnEl.textContent = ''; warnEl.classList.remove('visible'); }
 glog('Grand Window closed.', 'imp');
 if (G.useMA) {
-if (G.handNum === 1 || G.fixedTeams) {
+if (G.fixedTeams) {
+assignProvisionalTeams();
+// team1/team2/teamBlue/teamRed are now correctly set to the permanent pairing, but
+// affiliations are deferred until AFTER the pre-invite phase resolves (v214+), so Hermit
+// can correctly tell who hasn't been privately paired via Lovers/Pan yet.
+G.affiliations = Array(G.nPlayers).fill(null);
+G.unaffiliatedSeats = allSeats();
+} else if (G.handNum === 1) {
 assignProvisionalTeams();
 G.teamBlue        = [...G.team1];
 G.teamRed         = [...G.team2];
@@ -3554,9 +3564,14 @@ function aiAuctionPick(seat) {
 if (!G.auctionTable.length) { G.auctionPickIdx++; advanceAuctionPick(); return; }
 const fool = G.auctionTable.find(c => c.ma && c.ma.fx === 'fool');
 const isEasy = G.diff === 'easy';
-const available = isEasy
+const isHard = G.diff === 'hard';
+let available = isEasy
 ? G.auctionTable.filter(c => !['lovers','hermit','pan'].includes(c.ma?.fx))
 : G.auctionTable;
+if (isHard) {
+const withoutEmergence = available.filter(c => c.ma?.fx !== 'emergence');
+if (withoutEmergence.length) available = withoutEmergence;
+}
 const foolAvail = available.find(c => c.ma && c.ma.fx === 'fool');
 const pick = foolAvail || [...available].sort((a,b) => (b.ma?.n||0) - (a.ma?.n||0))[0]
 || G.auctionTable[0];
@@ -3615,7 +3630,8 @@ G.affiliations?.[seat] === 'green' ? '🟢 Green Team' :
 G.affiliations?.[seat] === 'solo' ? '⚪ Solo' : 'Unaffiliated'}</strong>.` +
 (seat === G.teamBlueLeader ? ' You are the Blue Team Lead.' : '') +
 (seat === G.teamRedLeader ? ' You are the Red Team Lead.' : '');
-tsStartCountdown(seat);
+const countdownEl = document.getElementById('ts-countdown');
+if (countdownEl) countdownEl.textContent = '';
 }
 function tsStartCountdown(seat) {
 let remaining = 5;
@@ -3850,8 +3866,7 @@ G.affiliations[s] = 'solo';
 if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
 });
 G.unaffiliatedSeats = [];
-G.arrowDisabled = true;
-glog(`${SEAT_NAME_HTML(seat)} plays Hermit — ${toSolo.map(s=>SEAT_NAME_HTML(s)).join(', ')} go Solo. Arrow VP does not score for anyone this hand.`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} plays Hermit — ${toSolo.map(s=>SEAT_NAME_HTML(s)).join(', ')} go Solo (their Arrow VP is inert this hand). Players already on a team are unaffected.`, 'imp');
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
 G.hermitActive = true;
@@ -3879,19 +3894,18 @@ G.affiliations[seat]   = 'orange';
 G.affiliations[target] = 'orange';
 G.teamOrange = [seat, target];
 G.teamOrangeLeader = seat;
-if (!G.arrowDoubleSeats) G.arrowDoubleSeats = [];
-if (!G.arrowDoubleSeats.includes(seat)) G.arrowDoubleSeats.push(seat);
-if (!G.arrowDoubleSeats.includes(target)) G.arrowDoubleSeats.push(target);
+if (!G.arrowPrivatePairs) G.arrowPrivatePairs = [];
+G.arrowPrivatePairs.push([seat, target]);
 G.totalVP[target] = (G.totalVP[target]||0) + 25;
 G.vp[target] = (G.vp[target]||0) + 25;
-glog(`${SEAT_NAME_HTML(seat)} plays Pan — forms 🟠 Orange Team with ${SEAT_NAME_HTML(target)}! Both score double Arrow VP this hand. ${SEAT_NAME_HTML(target)} receives +25 VP. GT stakes: +150 VP success / −150 VP failure.`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} plays Pan — forms 🟠 Orange Team with ${SEAT_NAME_HTML(target)}! Their Arrow VP is shared privately between just the two of them this hand. ${SEAT_NAME_HTML(target)} receives +25 VP. GT stakes: +150 VP success / −150 VP failure.`, 'imp');
 G.decl[seat] = 'grandTichu';
 recordGTDeclarer(seat, true);
 if (!G.panPairs) G.panPairs = [];
 G.panPairs.push({ initiator: seat, invitee: target });
 } else {
 affiliateWith(seat, target, aff);
-glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id} → ${SEAT_NAME_HTML(target)} joins their team. Both score double Arrow VP this hand.`, 'good');
+glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id} → ${SEAT_NAME_HTML(target)} joins their team. Their Arrow VP is shared privately between just the two of them this hand.`, 'good');
 }
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
@@ -3931,8 +3945,14 @@ promptTarget(validTargets[0]);
 }
 function resolveFixedTeamsMA(seat, card) {
 if (card.ma.fx === 'hermit') {
-G.arrowDisabled = true;
-glog(`${SEAT_NAME_HTML(seat)} activates Hermit — Arrow VP does not score for anyone this hand (cancels any Lovers/Pan doubling too).`, 'imp');
+const pairedSeats = new Set((G.arrowPrivatePairs||[]).flat());
+const toSolo = (G.unaffiliatedSeats||[]).filter(s => !pairedSeats.has(s));
+toSolo.forEach(s => {
+G.affiliations[s] = 'solo';
+if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
+});
+G.unaffiliatedSeats = (G.unaffiliatedSeats||[]).filter(s => !toSolo.includes(s));
+glog(`${SEAT_NAME_HTML(seat)} activates Hermit — ${toSolo.map(s=>SEAT_NAME_HTML(s)).join(', ')} go Solo (their Arrow VP is inert this hand). Anyone already privately paired via Lovers/Pan is unaffected.`, 'imp');
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
 G.affilActivationsThisHand++;
@@ -3949,18 +3969,14 @@ processNextAffilPlayer();
 return;
 }
 const executeFT = (target) => {
-// Existence-guard, not a counter — being chosen by more than one Lovers/Pan
-// activation (from different teammates, or Lovers+Pan together) still only
-// doubles once, never stacks further.
-if (!G.arrowDoubleSeats) G.arrowDoubleSeats = [];
-if (!G.arrowDoubleSeats.includes(seat)) G.arrowDoubleSeats.push(seat);
-if (!G.arrowDoubleSeats.includes(target)) G.arrowDoubleSeats.push(target);
+if (!G.arrowPrivatePairs) G.arrowPrivatePairs = [];
+G.arrowPrivatePairs.push([seat, target]);
 if (isPanFT) {
 G.decl[seat] = 'grandTichu';
 recordGTDeclarer(seat, true);
-glog(`${SEAT_NAME_HTML(seat)} activates Pan — ${SEAT_NAME_HTML(seat)} and ${SEAT_NAME_HTML(target)} score double Arrow VP this hand. ${SEAT_NAME_HTML(seat)} also auto-declares Grand Tokoh (1.5× stakes: +150 VP success / −150 VP failure).`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} activates Pan — ${SEAT_NAME_HTML(seat)} and ${SEAT_NAME_HTML(target)}'s Arrow VP is shared privately between just the two of them this hand. ${SEAT_NAME_HTML(seat)} also auto-declares Grand Tokoh (1.5× stakes: +150 VP success / −150 VP failure).`, 'imp');
 } else {
-glog(`${SEAT_NAME_HTML(seat)} activates Lovers — ${SEAT_NAME_HTML(seat)} and ${SEAT_NAME_HTML(target)} score double Arrow VP this hand.`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} activates Lovers — ${SEAT_NAME_HTML(seat)} and ${SEAT_NAME_HTML(target)}'s Arrow VP is shared privately between just the two of them this hand.`, 'imp');
 }
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
@@ -3971,7 +3987,7 @@ processNextAffilPlayer();
 if (isHuman(seat)) {
 showChoice(
 `${card.ma.id} — Choose Teammate`,
-`Choose a teammate — you and they will both score double Arrow VP this hand${isPanFT ? ', and you will auto-declare Grand Tokoh' : ''}:`,
+`Choose a teammate — your captured Arrow VP will be shared privately between just the two of you this hand${isPanFT ? ', and you will auto-declare Grand Tokoh' : ''}:`,
 validTargetsFT.map(s => ({ label: `${SEAT_NAME_HTML(s)} (${G.totalVP[s]||0} VP)`, value: s })),
 target => executeFT(target)
 );
@@ -3981,11 +3997,10 @@ executeFT(validTargetsFT[0]);
 }
 function affiliateWith(inviterSeat, targetSeat, inviterAff) {
 G.unaffiliatedSeats = G.unaffiliatedSeats.filter(s => s !== targetSeat && s !== inviterSeat);
-// Lovers grants double Arrow VP to the activator and their chosen partner, same as Fixed
-// Teams mode, on top of whatever team-forming/joining effect follows below.
-if (!G.arrowDoubleSeats) G.arrowDoubleSeats = [];
-if (!G.arrowDoubleSeats.includes(inviterSeat)) G.arrowDoubleSeats.push(inviterSeat);
-if (!G.arrowDoubleSeats.includes(targetSeat)) G.arrowDoubleSeats.push(targetSeat);
+// Lovers keeps the activator and their chosen partner's captured Arrow VP private between
+// just the two of them this hand, on top of whatever team-forming/joining effect follows below.
+if (!G.arrowPrivatePairs) G.arrowPrivatePairs = [];
+G.arrowPrivatePairs.push([inviterSeat, targetSeat]);
 if (inviterAff === 'blue' || inviterAff === 'red' || inviterAff === 'green' || inviterAff === 'yellow' || inviterAff === 'orange') {
 G.affiliations[targetSeat] = inviterAff;
 teamArrayFor(inviterAff).push(targetSeat);
@@ -3995,13 +4010,13 @@ G.affiliations[inviterSeat] = 'green';
 G.affiliations[targetSeat]  = 'green';
 G.teamGreen = [inviterSeat, targetSeat];
 G.teamGreenLeader = inviterSeat;
-glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟢 Green Team — both score double Arrow VP this hand.`, 'imp');
+glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟢 Green Team — their Arrow VP is shared privately between just the two of them this hand.`, 'imp');
 } else {
 G.affiliations[inviterSeat] = 'yellow';
 G.affiliations[targetSeat]  = 'yellow';
 G.teamYellow = [inviterSeat, targetSeat];
 G.teamYellowLeader = inviterSeat;
-glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟡 Yellow Team — both score double Arrow VP this hand.`, 'imp');
+glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟡 Yellow Team — their Arrow VP is shared privately between just the two of them this hand.`, 'imp');
 }
 }
 }
@@ -4030,25 +4045,47 @@ glog(`${SEAT_NAME_HTML(targetSeat)} goes Solo.`, 'imp');
 }
 }
 function advanceToDefaultTeamAssignment() {
+if (G.fixedTeams) {
+(G.unaffiliatedSeats||[]).forEach(s => {
+G.affiliations[s] = G.team1.includes(s) ? 'blue' : 'red';
+});
+G.unaffiliatedSeats = [];
+finishTeamFormation();
+return;
+}
 let unaffiliated = [...G.unaffiliatedSeats];
 if (!unaffiliated.length) { finishTeamFormation(); return; }
 const n = G.nPlayers;
-const cutthroat = G.diff === 'hard' && allSeats().some(s => (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.75));
-if (cutthroat && unaffiliated.length >= 2) {
-const byVPDesc = [...unaffiliated].sort((a,b) => (G.totalVP[b]||0) - (G.totalVP[a]||0));
-const top1VP = G.totalVP[byVPDesc[0]]||0;
-const top2VP = G.totalVP[byVPDesc[1]]||0;
-const tiedAtTop = byVPDesc.filter(s => (G.totalVP[s]||0) === top1VP).length > 1
-&& top1VP === top2VP;
-if (!tiedAtTop) {
-const excluded = byVPDesc.slice(0, 2);
-excluded.forEach(s => {
+const cutthroat = G.diff === 'hard';
+if (cutthroat && unaffiliated.length) {
+const cutthroatSeats = unaffiliated.filter(s => (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65));
+const lowScorers = unaffiliated.filter(s => !cutthroatSeats.includes(s));
+if (cutthroatSeats.length > 0) {
+const soloOut = s => {
 G.affiliations[s] = 'solo';
 if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
 glog(`${SEAT_NAME_HTML(s)} left solo (Hard cutthroat — high VP).`, 'imp');
-});
-unaffiliated = unaffiliated.filter(s => !excluded.includes(s));
-G.unaffiliatedSeats = [...unaffiliated];
+};
+if (lowScorers.length === 0) {
+// Everyone remaining unaffiliated has crossed the threshold -> all go solo
+cutthroatSeats.forEach(soloOut);
+} else if (lowScorers.length === 1) {
+// Exactly one low scorer -> pairs with the lowest-VP cutthroat seat, pulling that one out of solo
+const sortedCutthroat = [...cutthroatSeats].sort((a,b) => (G.totalVP[a]||0)-(G.totalVP[b]||0));
+const rescuedPartner = sortedCutthroat[0];
+sortedCutthroat.slice(1).forEach(soloOut);
+const targetTeam = G.teamBlue.length <= G.teamRed.length ? 'blue' : 'red';
+[rescuedPartner, lowScorers[0]].forEach(s => { G.affiliations[s] = targetTeam; teamArrayFor(targetTeam).push(s); });
+glog(`${SEAT_NAME_HTML(lowScorers[0])} pairs with ${SEAT_NAME_HTML(rescuedPartner)} (lowest-VP cutthroat) to form a team.`, 'imp');
+} else {
+// 2+ low scorers -> all cutthroat seats go solo, all low scorers join one shared team together
+cutthroatSeats.forEach(soloOut);
+const targetTeam = G.teamBlue.length <= G.teamRed.length ? 'blue' : 'red';
+lowScorers.forEach(s => { G.affiliations[s] = targetTeam; teamArrayFor(targetTeam).push(s); });
+glog(`${lowScorers.map(s=>SEAT_NAME_HTML(s)).join(', ')} join together as one team (below cutthroat threshold).`, 'imp');
+}
+unaffiliated = [];
+G.unaffiliatedSeats = [];
 }
 }
 if (!unaffiliated.length) { finishTeamFormation(); return; }
@@ -4640,7 +4677,7 @@ if (G.decl[seat]==='tichu'||G.decl[seat]==='grandTichu') return;
 const myTeam = G.team1?.includes(seat)?G.team1:G.team2?.includes(seat)?G.team2:G.teamGreen?.includes(seat)?G.teamGreen:[];
 const teamGCCount = myTeam.filter(s => s !== seat &&
 (G.decl[s]==='grandCukong'||G.decl[s]==='cukong')).length;
-const cutthroat = G.diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.75));
+const cutthroat = G.diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65));
 if (teamGCCount >= myTeam.length - 1 && !cutthroat) return;
 G.decl[seat] = 'cukong';
 recordCDeclarer(seat);
@@ -5287,7 +5324,7 @@ G.towerOn = false; G.chariotLock = false;
 G.balanceSeat = null;
 G.foolActive = false; G.foolSeat = null;
 G.foolPlayedThisTrick = false; G.foolPlayedCardIds = new Set();
-G.starDoubleOn = false; G.suitBonus = []; G.arrowDoubleSeats = []; G.arrowDisabled = false;
+G.starDoubleOn = false; G.suitBonus = []; G.arrowPrivatePairs = []; G.arrowDisabled = false; G.pendingArrowExtra = {};
 G.cosmosSeat = null;
 G.selected = [];
 if (G.phase === 'scoring') return;
@@ -5581,20 +5618,18 @@ G.suitBonus.forEach(sb=>{
 const matchingPlays = (G.trickCards||[]).filter(tc => tc.card.suit === sb.suit);
 if (matchingPlays.length > 0) {
 matchingPlays.forEach(tc => {
-G.arrowVP[tc.seat] = (G.arrowVP[tc.seat]||0) + 5;
-G.vp[tc.seat] = (G.vp[tc.seat]||0) + 5;
+G.pendingArrowExtra[tc.seat] = (G.pendingArrowExtra[tc.seat]||0) + 5;
 });
 const breakdown = matchingPlays.map(tc => `${SEAT_NAME(tc.seat)} +5▲︎`).join(', ');
-glog(`${sb.suit} bonus (activated by ${SEAT_NAME(sb.seat)}): ${breakdown}.`,'good');
+glog(`${sb.suit} bonus (activated by ${SEAT_NAME(sb.seat)}): ${breakdown} (added to their Arrow pool at hand-end).`,'good');
 }
 });
 if (G.cosmosSeat!==null) {
 const receiver = trickReceiver ?? winner;
 const suits = new Set(cards.map(c=>c.suit)).size;
 const bonus = suits*6;
-G.arrowVP[receiver]=(G.arrowVP[receiver]||0)+bonus;
-G.vp[receiver]=(G.vp[receiver]||0)+bonus;
-glog(`Cosmos: +${bonus}▲︎ (${suits} suits) → ${SEAT_NAME_HTML(receiver)}.`,'good');
+G.pendingArrowExtra[receiver] = (G.pendingArrowExtra[receiver]||0) + bonus;
+glog(`Cosmos: +${bonus}▲︎ (${suits} suits) → ${SEAT_NAME_HTML(receiver)} (added to their Arrow pool at hand-end).`,'good');
 }
 }
 function checkGoOut(seat) {
@@ -5956,25 +5991,7 @@ G.vp[s] = (G.vp[s]||0) + tp;
 G.tpVP[s] = (G.tpVP[s]||0) + tp;
 }
 });
-// Naga (Arrow, 25) and Garuda (Radioactive, 25) score by their VP type in every scoreMode,
-// not just BZF — this is separate from the mode-gated pooling below for other Arrow/Radioactive cards.
-if (!G.arrowDisabled) {
-const allTeamsNaga = allActiveTeams().filter(t => t && t.length >= 2);
-allTeamsNaga.forEach(team => {
-const teamWentOut = team.filter(s => G.outOrder.includes(s));
-if (teamWentOut.length === 0) return;
-let nagaPool = 0;
-team.forEach(s => { nagaPool += (G.capturedCards[s]||[]).filter(c => c.role === ROLES.Naga).length * 25; });
-if (nagaPool === 0) return;
-team.forEach(s => {
-const doubled = (G.arrowDoubleSeats||[]).includes(s);
-const amount = doubled ? nagaPool * 2 : nagaPool;
-G.arrowVP[s] = (G.arrowVP[s]||0) + amount;
-G.vp[s] = (G.vp[s]||0) + amount;
-});
-glog(`Team [${team.map(SEAT_NAME).join('+')}] Naga Arrow pool: +${nagaPool} each.`);
-});
-}
+// Garuda (Radioactive, 25) scores in every scoreMode, not just BZF.
 allSeats().forEach(s => {
 if (!G.outOrder.includes(s)) return;
 const garudaCount = (G.capturedCards[s]||[]).filter(c => c.role === ROLES.Garuda).length;
@@ -5985,31 +6002,51 @@ G.radioactiveVP[s] = (G.radioactiveVP[s]||0) - garudaPen;
 glog(`${SEAT_NAME_HTML(s)}: −${garudaPen}☢︎ from ${garudaCount} captured Garuda.`, 'bad');
 }
 });
+// Arrow VP (Naga always; other Arrow-type cards in BZF mode only) is a catch-up mechanic,
+// not a skill signal — captured value is pooled and shared rather than credited fully to
+// individual teams. Solo seats (true-Solo or Cutthroat-Solo) make their own captures inert:
+// contributing nothing to anyone. Lovers/Pan-designated pairs keep their own combined
+// captures private, split only between the two of them, exempt from the shared table pool.
+// All splits use 5 VP increments (the base Arrow unit) with any remainder going to the
+// lowest-scoring member of that group, so the division is easy to do by hand at a real table.
+if (!G.arrowDisabled && G.outOrder.length > 0) {
+const perSeatArrow = {};
+allSeats().forEach(s => { perSeatArrow[s] = (G.capturedCards[s]||[]).filter(c => c.role === ROLES.Naga).length * 25; });
 if (G.scoreMode === 'bzf') {
-// Teams smaller than 2 (e.g. 3P's solo double-hand seat) are intentionally
-// excluded from Arrow VP entirely — solo players neither earn nor suffer
-// Arrow-type card values (including King's negative pool contribution).
-if (!G.arrowDisabled) {
-const allTeams = allActiveTeams().filter(t => t && t.length >= 2);
-allTeams.forEach(team => {
-const teamWentOut = team.filter(s => G.outOrder.includes(s));
-if (teamWentOut.length === 0) return;
-let pool = 0;
-team.forEach(s => {
-pool += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow)
+allSeats().forEach(s => {
+perSeatArrow[s] += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow)
 .reduce((sum, c) => sum + (c.rank === 14 ? -10 : 5), 0);
 });
-if (pool === 0) return;
-team.forEach(s => {
-const doubled = (G.arrowDoubleSeats||[]).includes(s);
-const amount = doubled ? pool * 2 : pool;
+}
+const distribute = (seats, groupLabel) => {
+const total = seats.reduce((sum, s) => sum + perSeatArrow[s], 0);
+if (total === 0) return;
+const base = Math.floor(total / seats.length / 5) * 5;
+const remainder = total - base * seats.length;
+const lowest = [...seats].sort((a,b) => (G.totalVP[a]||0) - (G.totalVP[b]||0))[0];
+seats.forEach(s => {
+const amount = base + (s === lowest ? remainder : 0);
 G.arrowVP[s] = (G.arrowVP[s]||0) + amount;
 G.vp[s] = (G.vp[s]||0) + amount;
 });
-const poolBreakdown = team.map(s => (G.arrowDoubleSeats||[]).includes(s) ? `${SEAT_NAME(s)} +${pool*2} (doubled)` : `${SEAT_NAME(s)} +${pool}`).join(', ');
-glog(`Team [${team.map(SEAT_NAME).join('+')}] Arrow pool: ${poolBreakdown}.`);
+glog(`${groupLabel}: ${base} each${remainder ? `, +${remainder} extra to ${SEAT_NAME(lowest)}` : ''}.`);
+};
+const soloSeats = allSeats().filter(s => G.affiliations[s] === 'solo');
+const privatePairs = (G.arrowPrivatePairs||[]).filter(([a,b]) => !soloSeats.includes(a) && !soloSeats.includes(b));
+const pairedSeats = new Set();
+privatePairs.forEach(([a,b]) => { pairedSeats.add(a); pairedSeats.add(b); });
+// Suit-bonus Majors (Magus/Priestess/Empress/Emperor/Moon/Sun) and Cosmos award Arrow VP
+// per-trick rather than from captured cards — fold that in here too, doubled first for any
+// seat currently in an active Lovers/Pan pair, before the pool/private-pair split below.
+allSeats().forEach(s => {
+const extra = G.pendingArrowExtra?.[s] || 0;
+if (extra !== 0) perSeatArrow[s] += pairedSeats.has(s) ? extra * 2 : extra;
 });
+const generalSeats = allSeats().filter(s => !soloSeats.includes(s) && !pairedSeats.has(s));
+if (generalSeats.length > 0) distribute(generalSeats, `Shared Arrow pool (${generalSeats.length} players)`);
+privatePairs.forEach(([a,b]) => distribute([a,b], `Lovers/Pan private Arrow pool (${SEAT_NAME(a)}+${SEAT_NAME(b)})`));
 }
+if (G.scoreMode === 'bzf') {
 allSeats().forEach(s => {
 if (!G.outOrder.includes(s)) return; // Radioactive VP only scores for players who went out
 const radioactiveCards = (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isRadioactive);
@@ -6119,7 +6156,9 @@ return `<tr style="border-bottom:1px solid var(--border);">
 <td style="padding:6px;text-align:center;${gcColor}">${gcLabel !== '—' ? gcLabel+(gcBonus!==0?' ('+(gcBonus>0?'+':'')+gcBonus+')':'') : gcBonus!==0?'<span style="font-size:0.75em;opacity:0.7">'+(gcBonus>0?'+':'')+gcBonus+'</span>':'—'}</td>
 <td style="padding:6px;text-align:right;color:var(--green)">${G.teamBonus[s]?'+'+G.teamBonus[s]:'—'}</td>
 <td style="padding:6px;text-align:right;color:var(--vp-bonus)">${handVP>=0?'+':''}${handVP}</td>
-<td style="padding:6px;text-align:right;color:var(--gold3);${strikeStyle}">${bzf!==null?(bzf>=0?'+':'')+bzf:'—'}</td>
+<td style="padding:6px;text-align:right;color:var(--vp-star);${strikeStyle}">${G.scoreMode==='bzf'?((G.starVP[s]||0)>=0?'+':'')+(G.starVP[s]||0):'—'}</td>
+<td style="padding:6px;text-align:right;color:var(--vp-arrow);${strikeStyle}">${G.scoreMode==='bzf'?((G.arrowVP[s]||0)>=0?'+':'')+(G.arrowVP[s]||0):'—'}</td>
+<td style="padding:6px;text-align:right;color:var(--vp-radioactive);${strikeStyle}">${G.scoreMode==='bzf'?((G.radioactiveVP[s]||0)>=0?'+':'')+(G.radioactiveVP[s]||0):'—'}</td>
 <td style="padding:6px;text-align:right;font-weight:700;color:var(--text)">${(()=>{
 if (isLoser) return '0';
 const outB = G.outVP[s]||0;
@@ -6624,7 +6663,7 @@ if (looseStars.length) {
 const declPriorityA = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
 const myPA = isDeclDoable(seat) ? declPriorityA(seat) : 0;
 const myTeamA = seatTeam(seat);
-const cutthroatA = diff === 'hard' && myTeamA.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.75));
+const cutthroatA = diff === 'hard' && myTeamA.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65));
 const teammateNeedsSlot = !cutthroatA && myTeamA.some(s => s !== seat && !G.outOrder.includes(s) &&
 declPriorityA(s) > myPA && isDeclDoable(s));
 for (const sc of looseStars) {
@@ -7334,13 +7373,11 @@ return (handArr||[]).some(c => c.role === ROLES.Naga || c.role === ROLES.Garuda 
 || findAllBombs(handArr||[]).length > 0;
 }
 function arrowVPOfCards(cards) {
-return (cards||[]).reduce((s,c) => s + (!c.isJoker && c.isArrow ? (c.rank===14?-10:5) : 0), 0);
+return (cards||[]).reduce((s,c) => s + (c.role === ROLES.Naga ? 25 : (!c.isJoker && c.isArrow ? (c.rank===14?-10:5) : 0)), 0);
 }
 function tpVPOfCards(cards) {
 let pts = 0;
 (cards||[]).forEach(c => {
-if (c.role === ROLES.Naga) pts += 25;
-if (c.role === ROLES.Garuda) pts -= 25;
 if (!c.isJoker) {
 if (c.rank === 4) pts += 5;
 if (c.rank === 10) pts += 10;
@@ -7541,7 +7578,7 @@ const aiDecl = G.decl[seat];
 const aiIsGT  = aiDecl === 'grandTichu' || aiDecl === 'tichu';
 const aiIsGC  = aiDecl === 'grandCukong';
 const aiIsC   = aiDecl === 'cukong';
-if (aiIsGT) {
+if (aiIsGT && isDeclDoable(seat)) {
 } else {
 const cukongShouldPass = mustAvoidFirstOut && noOneOut;
 // Cheap-singleton override: an Ace–9 single is always worth playing over anyone —
@@ -7566,7 +7603,7 @@ const tmIsC  = winningTeammateDecl === 'cukong';
 // once THAT teammate personally crosses 75% of the VP goal — not triggered by any
 // unrelated player's VP, since that would wrongly disrupt a still-deserving teammate.
 const cutthroat = diff === 'hard' && teammateWinning &&
-(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.75);
+(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.65);
 // Rule B: defer to a teammate whose live declaration outranks this AI's own
 // (or lack of one), as long as their declaration is still doable. Also restores
 // the baseline courtesy pass for a plain undeclared-vs-undeclared winning teammate
@@ -7584,7 +7621,7 @@ const cDefersToGC = aiIsC && tmIsGC;
 const declaredTeammatePass = cDefersToGC && winnerStillActive;
 const cukongTeammateRaw = myTeam.find(s => s !== seat && (G.decl[s]==='cukong'||G.decl[s]==='grandCukong'));
 const cukongTeammateIsCutthroatLeader = cukongTeammateRaw !== undefined &&
-(G.totalVP[cukongTeammateRaw]||0) >= Math.floor((G.vpGoal||1000)*0.75);
+(G.totalVP[cukongTeammateRaw]||0) >= Math.floor((G.vpGoal||1000)*0.65);
 const cukongToppertPass = diff === 'hard' && teammateWinning && cukongTeammateRaw !== undefined &&
 G.trickWinner === cukongTeammateRaw && G.outOrder.length === 0 && curr && !curr.isBomb &&
 isUnbeatableByOthers({type:curr.type, len:curr.len||curr.cards?.length||1, topRank:curr.topRank||curr.rank}, cukongTeammateRaw) &&
@@ -7698,13 +7735,12 @@ const trickArrowVP = arrowVPOfCards(curr.cards);
 const oppOtherToppers = extractCandidateMelds(oppHand).filter(m => isUnbeatableByOthers(m, oppSeat));
 const oppHasStandingTool = hasStandingLeadTool(oppHand);
 const denyMonsterSet = oppOtherToppers.length > 0 && !oppHasStandingTool;
-const arrowTrigger = myTeam.length > 1 && trickArrowVP > 50;
-const tpTrigger = trickTP > 50;
+const highValueTrigger = (trickTP + (myTeam.length > 1 ? trickArrowVP : 0)) >= 25;
 const currMeld = {type: curr.type, len: curr.len || curr.cards?.length || 1, topRank: curr.topRank||curr.rank};
 const currIsTopper = isUnbeatableByOthers(currMeld, oppSeat);
 // Declaration block only applies when this play is a genuine topper (unbeatable table-wide) —
 // not merely a play the responding AI itself happens to lack a natural answer for.
-if ((oppDeclLive && currIsTopper) || arrowTrigger || tpTrigger || denyMonsterSet) {
+if ((oppDeclLive && currIsTopper) || highValueTrigger || denyMonsterSet) {
 hardShouldBomb = true;
 } else {
 hardShouldBomb = currIsTopper && oppOtherToppers.length === 0;
@@ -7737,10 +7773,10 @@ playCards(seat, best.cards, best); return;
 }
 }
 } else if (diff === 'hard' && teammateWinning && !curr.isBomb &&
-(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.75)) {
+(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.65)) {
 // Cutthroat: chase down the team's own near-goal leader if this trick is valuable enough.
-const trickTP = tpVPOfCards(curr.cards);
-if (trickTP > 50) {
+const trickValue = tpVPOfCards(curr.cards) + arrowVPOfCards(curr.cards);
+if (trickValue >= 25) {
 const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
 glog(`${SEAT_NAME_HTML(seat)} bombs teammate's high-value trick (Cutthroat).`, 'imp');
 activateSuitBonusForBomb(seat, best.cards);
@@ -8029,8 +8065,8 @@ bestResponse={cards:withPx,set:s};
 if (!bestResponse && opponentWinning && hasGTTeammate && curr && !curr.isBomb) {
 const rescueBombs = findAllBombs(hand).filter(b => canFollow(b, curr));
 if (rescueBombs.length) {
-const cutthroatActive = diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.75));
-const selfInterestWins = cutthroatActive && (tpVPOfCards(curr.cards) > 50 || arrowVPOfCards(curr.cards) > 50);
+const cutthroatActive = diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65));
+const selfInterestWins = cutthroatActive && (tpVPOfCards(curr.cards) + arrowVPOfCards(curr.cards)) >= 25;
 if (!selfInterestWins) {
 const weakestRescueBomb = rescueBombs.reduce((a,b) =>
 (b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a
@@ -8352,12 +8388,9 @@ if (opponentWinning && winnerRank >= 12) activate = true;
 }
 break;
 case 'emergence':
-if (diff !== 'hard') break;
-if (!G.emergenceRevealed) {
-const anyDeclared = allSeats().some(s => s !== seat &&
-(G.decl[s]==='grandTichu'||G.decl[s]==='tichu'));
-if (anyDeclared) activate = true;
-}
+// Hard AI already has full hand visibility built into its own decision-making, so
+// activating this (which now only reveals to the activator, not the whole table) provides
+// no strategic benefit — the AI never chooses to activate it.
 break;
 }
 if (!activate) continue;
@@ -9071,6 +9104,7 @@ token.id = 'seat-token-' + seat;
 const myTeam = G.team1?.includes(seat) ? 'team1' : G.team2?.includes(seat) ? 'team2' :
 G.teamGreen?.includes(seat) ? 'team-green' :
 G.teamYellow?.includes(seat) ? 'team4' :
+G.teamOrange?.includes(seat) ? 'team5' :
 (G.soloSeats?.includes(seat) ? 'solo' : '');
 const isActive = seat === G.activeSeat;
 const isDoubleHand = seat === G.doubleHandSeat || (G.nPlayers === 2);
@@ -9254,7 +9288,7 @@ hint = 'Double all ★ Star VP this trick';
 break;
 case 'emergence':
 if (inTrick && !G.emergenceRevealed)
-hint = 'Reveal all hands to all players';
+hint = 'Reveal all hands to you only';
 break;
 case 'cosmos':
 if (inTrick && isLead && !G.cosmosSeat)
@@ -9980,8 +10014,13 @@ document.getElementById('crown-screen').classList.add('open');
 let _emergenceCb = null;
 function showEmergenceScreen(activatorSeat, cb) {
 G.emergenceRevealed = true;
+G.emergenceActivatorSeat = activatorSeat;
+glog(`${SEAT_NAME_HTML(activatorSeat)} activates Emergence — reveals all hands to ${SEAT_NAME_HTML(activatorSeat)} only.`, 'imp');
+if (!isHuman(activatorSeat)) {
+if (cb) cb(); else { render(); updateActions(); }
+return;
+}
 _emergenceCb = cb || null;
-glog(`${SEAT_NAME_HTML(activatorSeat)} activates Emergence — all hands revealed!`, 'imp');
 const container = document.getElementById('emergence-hands');
 container.innerHTML = '';
 allSeats().forEach(s => {
