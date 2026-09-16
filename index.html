@@ -107,6 +107,15 @@ body:has(#game-screen.active) #table-zoom-ctrl{display:flex;}
 #sound-toggle-btn{position:fixed;top:10px;right:54px;z-index:1200;display:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:15px;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.28);}
 body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 #sound-toggle-btn:active{transform:scale(0.94);}</style>
+<style id="team-formation-extra">
+#deal-cards-zone{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8;text-align:center;}
+#deal-cards-zone.visible{display:block;}
+#deal-cards-btn{padding:11px 22px;border-radius:6px;border:2px solid var(--gold3);background:var(--gold);color:var(--text);font-family:'Cinzel',serif;font-weight:800;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.35);transition:all 0.15s;}
+#deal-cards-btn:hover{background:var(--gold2);transform:translateY(-1px);}
+.seat-token-chip.affil-preview-target{border-color:var(--gold3) !important;border-width:3px !important;animation:leadPassPulse 1.2s ease-in-out infinite;}
+.seat-token-chip.affil-preview-chosen{border-color:var(--gold) !important;border-width:3px !important;box-shadow:0 0 0 3px rgba(201,168,76,0.6),0 0 18px rgba(201,168,76,0.8) !important;}
+.seat-token-lead-mark{font-family:'Cinzel',serif;font-size:0.56rem;font-weight:900;color:var(--gold3);letter-spacing:0.04em;margin-top:1px;}
+</style>
 </head>
 <body>
 
@@ -121,7 +130,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v219</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v218</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -279,6 +288,10 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
       </div>
       <!-- Trick zone at center -->
       <div id="trick-zone"></div>
+      <!-- Team Formation: Deal Cards prompt, floats inside felt -->
+      <div id="deal-cards-zone">
+        <button id="deal-cards-btn">Deal Cards</button>
+      </div>
       <!-- Seat tokens rendered by renderTableSeats() -->
     </div><!-- end table-area -->
     </div><!-- end table-scroll -->
@@ -374,16 +387,6 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
   <div class="privacy-title" id="privacy-title">Pass the Device</div>
   <div class="privacy-sub" id="privacy-sub">Hand the device to the next player. Press Ready when you are alone.</div>
   <button class="privacy-btn" id="privacy-btn" onclick="privacyReady()">I'm Ready ✦</button>
-</div>
-
-<!-- Team Selection Screen -->
-<div id="team-selection-screen">
-  <div class="ts-title">✦ Team Formation ✦</div>
-  <div class="ts-subtitle" id="ts-subtitle">Hand <span id="ts-hand-num">2</span> — VP Standings &amp; Team Affiliations</div>
-  <div id="ts-vp-strip"></div>
-  <div id="ts-log"></div>
-  <div id="ts-countdown"></div>
-  <button class="ts-continue-btn" id="ts-continue-btn" onclick="tsHumanContinue()">Continue ✦</button>
 </div>
 
 <!-- Grand Tichu Deal Screen -->
@@ -869,13 +872,22 @@ cards.push(newCard(suit, 15));
 return cards;
 }
 function getActiveSuits(nPlayers) {
-if (nPlayers >= 5) return [...SUITS_ALL];
+if (nPlayers === 6) return [...SUITS_ALL];
+if (nPlayers === 5) {
+if (!G.suitExclusionOrder || G.suitExclusionOrder.length !== 6) {
+G.suitExclusionOrder = shuffle([...SUITS_ALL]);
+}
+const excluded = G.suitExclusionOrder[(G.handNum - 1) % 6];
+return SUITS_ALL.filter(s => s !== excluded);
+}
 return shuffle([...SUITS_ALL]).slice(0, 4);
 }
 function assignJokerRoles(cards, nPlayers) {
 const jokers = cards.filter(c => c.isJoker);
-const roles = nPlayers >= 5
+const roles = nPlayers === 6
 ? [ROLES.Naga, ROLES.Garuda, ROLES.Mulai, ROLES.Anjing, ROLES.Anjing, ROLES.Anjing]
+: nPlayers === 5
+? [ROLES.Naga, ROLES.Garuda, ROLES.Mulai, ROLES.Anjing, ROLES.Anjing]
 : [ROLES.Naga, ROLES.Garuda, ROLES.Mulai, ROLES.Anjing];
 const shuffledRoles = shuffle([...roles]);
 jokers.forEach((j, i) => {
@@ -2493,6 +2505,7 @@ teamBonus: {},
 capturedCards: Array(n).fill(null).map(()=>[]),
 team1: [], team2: [], soloSeats: [],
 doubleHandSeat: null, doubleHandChoice: null,
+suitExclusionOrder: null,
 outOrder: [],
 trickCards: [],
 trickMACards: [],
@@ -2565,6 +2578,7 @@ foolSeat: null,
 foolPlayedThisTrick: false,
 foolPlayedCardIds: new Set(),
 leadPassMode: null,
+aiAffilPreview: null,
 hangmanSeat: null, hangmanSeatConsumed: false,
 trickPassed: Array(n).fill(false),
 passPending: {},
@@ -2578,7 +2592,14 @@ document.getElementById('start-screen').style.display = 'none';
 document.getElementById('game-screen').classList.add('active');
 document.getElementById('action-bar').style.display = 'flex';
 document.getElementById('action-bar').style.flexWrap = 'wrap';
+if (n >= 3) {
+assignProvisionalTeams();
+G.phase = 'teamselection';
+render();
+showDealCardsPrompt(dealHand);
+} else {
 dealHand();
+}
 }
 function showStartScreen() {
 if (document.getElementById('game-screen').classList.contains('active')) {
@@ -2670,6 +2691,7 @@ G.starDoubleOn = false; G.emergenceRevealed = false; G.emergenceActivatorSeat = 
 G.foolActive = false; G.hangmanSeat = null; G.hangmanSeatConsumed = false;
 G.foolPlayedThisTrick = false; G.foolPlayedCardIds = new Set();
 G.leadPassMode = null;
+G.aiAffilPreview = null;
 G._resolveHasNaga = false;
 G.trickPassed  = Array(G.nPlayers).fill(false);
 G.passPending  = {};
@@ -2713,7 +2735,7 @@ G.bsAtTeamSelectionStart = Array(G.nPlayers).fill(null).map(()=>[]);
 }
 glog(`— Hand ${G.handNum} begins. Suits: ${G.activeSuits.join(', ')}.`, 'imp');
 const isDoubleAll  = G.nPlayers === 2;
-const isDoubleSome = G.doubleHandSeat !== null && G.doubleHandSeat !== 'both';
+const isDoubleSome = G.doubleHandSeat !== null && G.doubleHandSeat !== 'both' && G.nPlayers !== 5;
 const dhs = isDoubleSome ? G.doubleHandSeat : null;
 const fullHands  = {};
 const fullHandsB = {};
@@ -3582,88 +3604,31 @@ topUpAuction(Math.max(3, G.auctionTable.length));
 G.auctionPickIdx++;
 advanceAuctionPick();
 }
-let _tsHumanQueue = [];
-let _tsOnComplete = null;
-let _tsCountdownTimer = null;
-function showTeamSelectionScreen(onComplete) {
-_tsOnComplete = onComplete;
-_tsHumanQueue = [...humanSeats()];
-const tsHandNumEl = document.getElementById('ts-hand-num');
-if (tsHandNumEl) tsHandNumEl.textContent = G.handNum + 1;
-document.getElementById('team-selection-screen').classList.add('open');
-tsAdvanceHuman();
-}
-function tsRenderVPStrip(highlightSeat) {
-const strip = document.getElementById('ts-vp-strip');
-strip.innerHTML = '';
-allSeats().slice().sort((a,b) => (G.totalVP[b]||0) - (G.totalVP[a]||0))
-.forEach(s => {
-const aff = G.affiliations?.[s];
-const teamLabel = aff === 'blue' ? '🔵 Blue' : aff === 'red' ? '🔴 Red'
-: aff === 'green' ? '🟢 Green' : aff === 'solo' ? '⚪ Solo' : '— Unaffiliated';
-const cls = aff || '';
-const isLead = s === G.teamBlueLeader ? ' 👑 Lead' : s === G.teamRedLeader ? ' 👑 Lead' : s === G.teamGreenLeader ? ' 👑 Lead' : '';
-const pill = document.createElement('div');
-pill.className = `ts-vp-pill ${cls}${s === highlightSeat ? ' current-player' : ''}`;
-pill.innerHTML = `<span class="ts-vp-name">${SEAT_NAME(s)}${isLead}</span>
-<span class="ts-vp-score">${G.totalVP[s]||0}▲︎</span>
-<span class="ts-vp-team">${teamLabel}</span>`;
-strip.appendChild(pill);
-});
-}
-function tsAdvanceHuman() {
-tsClearCountdown();
-if (!_tsHumanQueue.length) {
-document.getElementById('team-selection-screen').classList.remove('open');
-if (_tsOnComplete) { const cb = _tsOnComplete; _tsOnComplete = null; cb(); }
+function showDealCardsPrompt(proceedFn) {
+const zone = document.getElementById('deal-cards-zone');
+const btn  = document.getElementById('deal-cards-btn');
+if (!humanSeats().length) {
+setTimeout(proceedFn, 500);
 return;
 }
-const seat = _tsHumanQueue[0];
-G.hotSeatActive = seat;
-tsRenderVPStrip(seat);
-const sub = document.getElementById('ts-subtitle');
-sub.innerHTML = `Hand ${G.handNum+1} — <strong>${SEAT_NAME(seat)}</strong>, here are the current team affiliations`;
-document.getElementById('ts-log').innerHTML =
-`You are <strong>${G.affiliations?.[seat] === 'blue' ? '🔵 Blue Team' :
-G.affiliations?.[seat] === 'red' ? '🔴 Red Team' :
-G.affiliations?.[seat] === 'green' ? '🟢 Green Team' :
-G.affiliations?.[seat] === 'solo' ? '⚪ Solo' : 'Unaffiliated'}</strong>.` +
-(seat === G.teamBlueLeader ? ' You are the Blue Team Lead.' : '') +
-(seat === G.teamRedLeader ? ' You are the Red Team Lead.' : '');
-const countdownEl = document.getElementById('ts-countdown');
-if (countdownEl) countdownEl.textContent = '';
+if (zone) zone.classList.add('visible');
+if (btn) btn.onclick = () => {
+if (zone) zone.classList.remove('visible');
+proceedFn();
+};
 }
-function tsStartCountdown(seat) {
-let remaining = 5;
-const el = document.getElementById('ts-countdown');
-el.textContent = `Auto-advancing in ${remaining}s…`;
-_tsCountdownTimer = setInterval(() => {
-remaining--;
-if (remaining <= 0) {
-tsClearCountdown();
-tsConfirmSeat();
-} else {
-el.textContent = `Auto-advancing in ${remaining}s…`;
-}
-}, 1000);
-}
-function tsClearCountdown() {
-if (_tsCountdownTimer) { clearInterval(_tsCountdownTimer); _tsCountdownTimer = null; }
-const el = document.getElementById('ts-countdown');
-if (el) el.textContent = '';
-}
-function tsHumanContinue() {
-tsClearCountdown();
-tsConfirmSeat();
-}
-function tsConfirmSeat() {
-if (_tsHumanQueue.length) _tsHumanQueue.shift();
-tsAdvanceHuman();
-}
-function tsUpdateLog(msg) {
-const el = document.getElementById('ts-log');
-if (el) el.innerHTML = msg;
-tsRenderVPStrip(G.hotSeatActive ?? -1);
+function aiPreviewAffilChoice(availableSeats, chosenSeat, cb) {
+G.aiAffilPreview = { availableSeats: new Set(availableSeats), chosenSeat: null };
+render();
+setTimeout(() => {
+if (!G.aiAffilPreview) { cb(); return; }
+G.aiAffilPreview.chosenSeat = chosenSeat;
+render();
+setTimeout(() => {
+G.aiAffilPreview = null;
+cb();
+}, 550);
+}, aiDelay());
 }
 function beginPreDealTeamSelectionFixed() {
 G.phase = 'teamselection';
@@ -3784,8 +3749,6 @@ G.handB[seat] = G.handB[seat].filter(c=>!usedIds.has(c.id));
 function doConfirmBid() { glog('Bidding Tableau not used in BenTokoh.', 'bad'); }
 function advanceToPreInviteMA() {
 if (!G.useMA) { advanceToDefaultTeamAssignment(); return; }
-const limit = G.nPlayers >= 5 ? 2 : 1;
-if (G.affilActivationsThisHand >= limit) { advanceToDefaultTeamAssignment(); return; }
 const holders = allSeats().filter(s => {
 const cards = (G.bs[s]||[]).filter(c =>
 c.ma && (c.ma.fx==='lovers'||c.ma.fx==='hermit'||c.ma.fx==='pan') &&
@@ -3801,8 +3764,6 @@ G.affilPlayerIdx = 0;
 processNextAffilPlayer();
 }
 function processNextAffilPlayer() {
-const limit = G.nPlayers >= 5 ? 2 : 1;
-if (G.affilActivationsThisHand >= limit) { advanceToDefaultTeamAssignment(); return; }
 if (G.affilPlayerIdx >= G.affilPlayerQueue.length) { advanceToDefaultTeamAssignment(); return; }
 const seat = G.affilPlayerQueue[G.affilPlayerIdx];
 G.affilPlayerIdx++;
@@ -3819,7 +3780,7 @@ const options = cards.map(c => ({ label: `${c.ma.id} — ${c.ma.d.split('.')[0]}
 options.push({ label: 'Pass — keep cards for later', value: 'pass' });
 showChoice(
 `Team Affiliation — ${SEAT_NAME(seat)} (${G.totalVP[seat]||0}▲︎)`,
-`Choose a card to activate, or pass. ${G.nPlayers >= 5 ? 2 : 1 - G.affilActivationsThisHand} activation(s) remaining this hand.`,
+`Choose a card to activate, or pass.`,
 options,
 v => {
 if (v === 'pass') { processNextAffilPlayer(); return; }
@@ -3871,24 +3832,24 @@ G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
 G.hermitActive = true;
 G.affilPlayerQueue = [];
-G.affilActivationsThisHand = G.nPlayers >= 5 ? 2 : 1;
 G.affilActivationsThisHand++;
 advanceToDefaultTeamAssignment();
 return;
 }
-const isLovers = card.ma.fx === 'lovers';
 const isPan    = card.ma.fx === 'pan';
-const allLeads = [G.teamBlueLeader, G.teamRedLeader, G.teamGreenLeader, G.teamYellowLeader, G.teamOrangeLeader].filter(s => s != null);
+const blueRedLeads = [G.teamBlueLeader, G.teamRedLeader].filter(s => s != null);
+const panPartnerSeats = allSeats().filter(s => G.affiliations[s] === 'orange');
 const validTargets = isPan
-? allSeats().filter(s => s !== seat && !allLeads.includes(s))
-: G.unaffiliatedSeats.filter(s => s !== seat);
+? allSeats().filter(s => s !== seat && !blueRedLeads.includes(s))
+: allSeats().filter(s => s !== seat && !panPartnerSeats.includes(s));
 if (!validTargets.length) {
 glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id}: no valid targets — card retained.`, 'imp');
 processNextAffilPlayer(); return;
 }
-const executeInvite = (target, accepted) => {
-if (accepted) {
+const executeInvite = (target) => {
 if (isPan) {
+stripFromAllTeams(seat);
+stripFromAllTeams(target);
 G.unaffiliatedSeats = G.unaffiliatedSeats.filter(s => s !== seat && s !== target);
 G.affiliations[seat]   = 'orange';
 G.affiliations[target] = 'orange';
@@ -3898,49 +3859,27 @@ if (!G.arrowPrivatePairs) G.arrowPrivatePairs = [];
 G.arrowPrivatePairs.push([seat, target]);
 G.totalVP[target] = (G.totalVP[target]||0) + 25;
 G.vp[target] = (G.vp[target]||0) + 25;
-glog(`${SEAT_NAME_HTML(seat)} plays Pan — forms 🟠 Orange Team with ${SEAT_NAME_HTML(target)}! Their Arrow VP is shared privately between just the two of them this hand. ${SEAT_NAME_HTML(target)} receives +25 VP. GT stakes: +150 VP success / −150 VP failure.`, 'imp');
+glog(`${SEAT_NAME_HTML(seat)} plays Pan — forms 🟠 Orange Team with ${SEAT_NAME_HTML(target)}, stripping any prior team affiliation! Their Arrow VP is pooled privately between just the two of them, on top of the shared table pool. ${SEAT_NAME_HTML(target)} receives +25 VP. GT stakes: +150 VP success / −150 VP failure. This partnership is exclusive — neither can be picked by a later Lovers.`, 'imp');
 G.decl[seat] = 'grandTichu';
 recordGTDeclarer(seat, true);
 if (!G.panPairs) G.panPairs = [];
 G.panPairs.push({ initiator: seat, invitee: target });
 } else {
 affiliateWith(seat, target, aff);
-glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id} → ${SEAT_NAME_HTML(target)} joins their team. Their Arrow VP is shared privately between just the two of them this hand.`, 'good');
 }
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 G.maDiscard.push(card);
-} else {
-glog(`${SEAT_NAME_HTML(target)} rejects ${SEAT_NAME_HTML(seat)}'s Lovers invite.`, 'imp');
-handleLoversRejection(seat, target, aff);
-}
 render();
 G.affilActivationsThisHand++;
 processNextAffilPlayer();
 };
 const promptTarget = (chosenTarget) => {
-executeInvite(chosenTarget, true);
+executeInvite(chosenTarget);
 };
 if (isHuman(seat)) {
-showChoice(
-`${card.ma.id} — Choose Target`,
-`Choose a player to ${isLovers ? 'invite to your team' : 'force onto your 🟢 Green Team'}:`,
-validTargets.map(s => ({
-label: `${SEAT_NAME_HTML(s)} (${G.totalVP[s]||0} VP)${
-s === G.teamBlueLeader ? ' 👑 Blue Lead' :
-s === G.teamRedLeader  ? ' 👑 Red Lead'  :
-s === G.teamGreenLeader? ' 👑 Green Lead' :
-s === G.teamYellowLeader? ' 👑 Yellow Lead' :
-s === G.teamOrangeLeader? ' 👑 Orange Lead' : ''}${
-G.decl[s]==='grandTichu'?' [GT declared]':
-G.decl[s]==='tichu'?' [Tokoh declared]':
-G.decl[s]==='grandCukong'?' [GC declared]':
-G.decl[s]==='cukong'?' [Cukong declared]':''}`,
-value: s
-})),
-target => promptTarget(target)
-);
+enterLeadPassMode(isPan ? 'pan' : 'lovers', validTargets, target => promptTarget(target));
 } else {
-promptTarget(validTargets[0]);
+aiPreviewAffilChoice(validTargets, validTargets[0], () => promptTarget(validTargets[0]));
 }
 }
 function resolveFixedTeamsMA(seat, card) {
@@ -3985,38 +3924,57 @@ G.affilActivationsThisHand++;
 processNextAffilPlayer();
 };
 if (isHuman(seat)) {
-showChoice(
-`${card.ma.id} — Choose Teammate`,
-`Choose a teammate — your captured Arrow VP will be shared privately between just the two of you this hand${isPanFT ? ', and you will auto-declare Grand Tokoh' : ''}:`,
-validTargetsFT.map(s => ({ label: `${SEAT_NAME_HTML(s)} (${G.totalVP[s]||0} VP)`, value: s })),
-target => executeFT(target)
-);
+enterLeadPassMode(isPanFT ? 'pan' : 'lovers', validTargetsFT, target => executeFT(target));
 } else {
-executeFT(validTargetsFT[0]);
+aiPreviewAffilChoice(validTargetsFT, validTargetsFT[0], () => executeFT(validTargetsFT[0]));
 }
+}
+function stripFromAllTeams(s) {
+G.teamBlue   = (G.teamBlue||[]).filter(x => x !== s);
+G.teamRed    = (G.teamRed||[]).filter(x => x !== s);
+G.teamGreen  = (G.teamGreen||[]).filter(x => x !== s);
+G.teamYellow = (G.teamYellow||[]).filter(x => x !== s);
+G.teamOrange = (G.teamOrange||[]).filter(x => x !== s);
+if (G.teamBlueLeader   === s) G.teamBlueLeader   = G.teamBlue[0]   ?? null;
+if (G.teamRedLeader    === s) G.teamRedLeader    = G.teamRed[0]    ?? null;
+if (G.teamGreenLeader  === s) G.teamGreenLeader  = G.teamGreen[0]  ?? null;
+if (G.teamYellowLeader === s) G.teamYellowLeader = G.teamYellow[0] ?? null;
+if (G.teamOrangeLeader === s) G.teamOrangeLeader = G.teamOrange[0] ?? null;
 }
 function affiliateWith(inviterSeat, targetSeat, inviterAff) {
+const targetAff = G.affiliations[targetSeat];
 G.unaffiliatedSeats = G.unaffiliatedSeats.filter(s => s !== targetSeat && s !== inviterSeat);
-// Lovers keeps the activator and their chosen partner's captured Arrow VP private between
-// just the two of them this hand, on top of whatever team-forming/joining effect follows below.
+// Lovers keeps the activator and their chosen partner's captured Arrow VP pooled privately
+// between just the two of them this hand — additive on top of whatever team pool(s) they're
+// each already part of, on top of whatever team-forming/joining effect follows below.
 if (!G.arrowPrivatePairs) G.arrowPrivatePairs = [];
 G.arrowPrivatePairs.push([inviterSeat, targetSeat]);
-if (inviterAff === 'blue' || inviterAff === 'red' || inviterAff === 'green' || inviterAff === 'yellow' || inviterAff === 'orange') {
+const teamColors = ['blue','red','green','yellow','orange'];
+const inviterHasTeam = teamColors.includes(inviterAff);
+const targetHasTeam  = teamColors.includes(targetAff);
+if (inviterHasTeam && targetHasTeam) {
+glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} become secret Lovers — their captured Arrow VP is pooled privately between the two of them, on top of their existing team pools. Team affiliations unchanged.`, 'imp');
+} else if (inviterHasTeam) {
 G.affiliations[targetSeat] = inviterAff;
 teamArrayFor(inviterAff).push(targetSeat);
+glog(`${SEAT_NAME_HTML(inviterSeat)} plays Lovers — ${SEAT_NAME_HTML(targetSeat)} joins their team as secret Lovers. Their Arrow VP is pooled privately between just the two of them, on top of the team pool.`, 'good');
+} else if (targetHasTeam) {
+G.affiliations[inviterSeat] = targetAff;
+teamArrayFor(targetAff).push(inviterSeat);
+glog(`${SEAT_NAME_HTML(inviterSeat)} plays Lovers — joins ${SEAT_NAME_HTML(targetSeat)}'s team as secret Lovers. Their Arrow VP is pooled privately between just the two of them, on top of the team pool.`, 'good');
 } else {
 if (!G.teamGreen.length) {
 G.affiliations[inviterSeat] = 'green';
 G.affiliations[targetSeat]  = 'green';
 G.teamGreen = [inviterSeat, targetSeat];
 G.teamGreenLeader = inviterSeat;
-glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟢 Green Team — their Arrow VP is shared privately between just the two of them this hand.`, 'imp');
+glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟢 Green Team as secret Lovers — their Arrow VP is shared privately between just the two of them this hand.`, 'imp');
 } else {
 G.affiliations[inviterSeat] = 'yellow';
 G.affiliations[targetSeat]  = 'yellow';
 G.teamYellow = [inviterSeat, targetSeat];
 G.teamYellowLeader = inviterSeat;
-glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟡 Yellow Team — their Arrow VP is shared privately between just the two of them this hand.`, 'imp');
+glog(`${SEAT_NAME_HTML(inviterSeat)} and ${SEAT_NAME_HTML(targetSeat)} form 🟡 Yellow Team as secret Lovers — their Arrow VP is shared privately between just the two of them this hand.`, 'imp');
 }
 }
 }
@@ -4027,22 +3985,6 @@ if (aff === 'green')  return G.teamGreen;
 if (aff === 'yellow') return G.teamYellow;
 if (aff === 'orange') return G.teamOrange;
 return [];
-}
-function handleLoversRejection(inviterSeat, targetSeat, inviterAff) {
-G.totalVP[targetSeat]  = (G.totalVP[targetSeat]||0)  - 25;
-G.totalVP[inviterSeat] = (G.totalVP[inviterSeat]||0) + 25;
-glog(`${SEAT_NAME_HTML(targetSeat)} gifts 25 VP to ${SEAT_NAME_HTML(inviterSeat)}.`, 'imp');
-G.unaffiliatedSeats = G.unaffiliatedSeats.filter(s => s !== targetSeat);
-if (inviterAff === 'blue') {
-G.affiliations[targetSeat] = 'red'; G.teamRed.push(targetSeat);
-glog(`${SEAT_NAME_HTML(targetSeat)} auto-joins Team Red.`, 'imp');
-} else if (inviterAff === 'red') {
-G.affiliations[targetSeat] = 'blue'; G.teamBlue.push(targetSeat);
-glog(`${SEAT_NAME_HTML(targetSeat)} auto-joins Team Blue.`, 'imp');
-} else {
-G.affiliations[targetSeat] = 'solo'; G.soloSeats.push(targetSeat);
-glog(`${SEAT_NAME_HTML(targetSeat)} goes Solo.`, 'imp');
-}
 }
 function advanceToDefaultTeamAssignment() {
 if (G.fixedTeams) {
@@ -4195,7 +4137,8 @@ glog(`Teams: T1=[${G.team1.map(s=>SEAT_NAME(s)).join(', ')}] T2=[${G.team2.map(s
 const ctx = G._teamSelectionContext;
 G._teamSelectionContext = null;
 if (ctx === 'preDeal') {
-showTeamSelectionScreen(() => setTimeout(dealHand, 300));
+render();
+showDealCardsPrompt(() => setTimeout(dealHand, 300));
 } else {
 beginTichuWindow();
 }
@@ -4796,6 +4739,112 @@ if (s && canFollow(s, curr)) return true;
 }
 return false;
 }
+function findWishFulfillCards(hand, wishedCards, curr) {
+const prevRank = curr.topRank || curr.rank || 0;
+const currType = curr.type;
+const currLen  = curr.len || curr.cards?.length || 1;
+const px = hand.find(c => c.role === ROLES.Garuda);
+const results = [];
+for (const wc of wishedCards) {
+if (currType === 'Single') {
+const s = validateSet([wc], prevRank);
+if (s && canFollow(s, curr)) results.push({cards:[wc], set:s});
+if (px) {
+const s2 = validateSet([wc, px], prevRank);
+if (s2 && s2.type === 'Single' && canFollow(s2, curr)) results.push({cards:[wc,px], set:s2});
+}
+} else if (currType === 'Pair') {
+const sameRank = hand.filter(c => !c.isJoker && c.rank === wc.rank);
+if (sameRank.length >= 2) {
+const cs = sameRank.slice(0,2);
+const s = validateSet(cs, prevRank);
+if (s && canFollow(s, curr)) results.push({cards:cs, set:s});
+}
+if (px && sameRank.length >= 1) {
+const cs = [sameRank[0], px];
+const s = validateSet(cs, prevRank);
+if (s && canFollow(s, curr)) results.push({cards:cs, set:s});
+}
+} else if (currType === 'Triple') {
+const sameRank = hand.filter(c => !c.isJoker && c.rank === wc.rank);
+if (sameRank.length >= 3) {
+const cs = sameRank.slice(0,3);
+const s = validateSet(cs, prevRank);
+if (s && canFollow(s, curr)) results.push({cards:cs, set:s});
+}
+} else if (currType === 'Straight') {
+const nats = hand.filter(c => !c.isJoker).sort((a,b) => a.rank - b.rank);
+for (let i = 0; i < nats.length; i++) {
+let run = [nats[i]];
+for (let j = i+1; j < nats.length; j++) {
+if (nats[j].rank === run[run.length-1].rank + 1) run.push(nats[j]);
+else break;
+}
+if (run.length >= currLen && run.some(c => c.rank === wc.rank)) {
+const seg = run.slice(0, currLen);
+if (seg.some(c => c.rank === wc.rank)) {
+const s = validateSet(seg, prevRank);
+if (s && canFollow(s, curr)) results.push({cards:seg, set:s});
+}
+}
+}
+} else if (currType === 'FullHouse') {
+const sameRank = hand.filter(c => !c.isJoker && c.rank === wc.rank);
+if (sameRank.length >= 3) {
+const others = hand.filter(c => !c.isJoker && c.rank !== wc.rank);
+const pairs = {};
+others.forEach(c => { pairs[c.rank] = (pairs[c.rank]||[]).concat(c); });
+for (const p of Object.values(pairs)) {
+if (p.length >= 2) {
+const fh = [...sameRank.slice(0,3), ...p.slice(0,2)];
+const s = validateSet(fh, prevRank);
+if (s && canFollow(s, curr)) results.push({cards:fh, set:s});
+}
+}
+}
+}
+}
+return results;
+}
+function sortBombsByStrength(bombs) {
+return [...bombs].sort((a,b) => (a.bombTier - b.bombTier) || (a.topRank - b.topRank) || (a.len - b.len));
+}
+// Central authority for wish fulfillment (both bomb-exempt loophole removed and the
+// don't-cannibalize-your-only-bomb rule), used by both human legality checks and AI.
+// Returns null if the wish cannot be fulfilled this turn, otherwise
+// { cards, set, forcedBomb } where forcedBomb means the *entire* bomb must be played
+// (extracting just the wished card would leave the player with no bomb at all, or the
+// current set on the table is itself a bomb that can only be beaten by a stronger one).
+function getWishFulfillPlay(hand, wishedRank, curr) {
+const wishedCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === wishedRank);
+if (!wishedCards.length) return null;
+if (curr && curr.isBomb) {
+const bombs = findAllBombs(hand).filter(b => b.cards.some(c => c.rank === wishedRank));
+const beating = bombs.filter(b => canFollow(b, curr));
+if (!beating.length) return null;
+const chosen = sortBombsByStrength(beating)[0];
+return { cards: chosen.cards, set: chosen, forcedBomb: true };
+}
+if (!curr) return null; // leading with an active wish is handled by the lead-side call sites, not this path
+const naturalCandidates = findWishFulfillCards(hand, wishedCards, curr);
+const allBombs = findAllBombs(hand);
+for (const cand of naturalCandidates) {
+const usedIds = new Set(cand.cards.map(c => c.id));
+const candTouchesBomb = allBombs.some(b => b.cards.some(bc => usedIds.has(bc.id)));
+if (!candTouchesBomb) return { cards: cand.cards, set: cand.set, forcedBomb: false };
+const remaining = hand.filter(c => !usedIds.has(c.id));
+if (findAllBombs(remaining).length > 0) return { cards: cand.cards, set: cand.set, forcedBomb: false };
+}
+const legalBombs = allBombs.filter(b => b.cards.some(c => c.rank === wishedRank) && canFollow(b, curr));
+if (legalBombs.length) {
+const chosen = sortBombsByStrength(legalBombs)[0];
+return { cards: chosen.cards, set: chosen, forcedBomb: true };
+}
+if (naturalCandidates.length) {
+return { cards: naturalCandidates[0].cards, set: naturalCandidates[0].set, forcedBomb: false };
+}
+return null;
+}
 function doPlay() {
 if (NET.mode==='join' && NET.inGame){ netSendIntent('play'); return; }
 if (G.phase !== 'trickplay') return;
@@ -4848,18 +4897,26 @@ glog('Cannot beat current meld.', 'bad');
 return;
 }
 if (G.mulaiWished && G.currentSet) {
-const playingBomb = set.isBomb;
-if (!playingBomb) {
 const hand = G.handA[seat];
-const wishedCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === G.mulaiWished);
-if (wishedCards.length > 0) {
-const canFulfill = canFulfillWish(hand, wishedCards, G.currentSet);
-if (canFulfill) {
+const fulfill = getWishFulfillPlay(hand, G.mulaiWished, G.currentSet);
+if (fulfill) {
+if (fulfill.forcedBomb) {
+const isThatBomb = sel.length === fulfill.cards.length && fulfill.cards.every(c => sel.some(s=>s.id===c.id));
+if (!isThatBomb) {
+glog(`Mulai wish — rank ${RANK_NAME[G.mulaiWished]||G.mulaiWished} is only reachable via a bomb here; you must play that bomb.`, 'bad');
+return;
+}
+} else {
 const playingWished = sel.some(c => !c.isJoker && c.rank === G.mulaiWished);
 if (!playingWished) {
 glog(`Mulai wish — you must play rank ${RANK_NAME[G.mulaiWished]||G.mulaiWished}.`, 'bad');
 return;
 }
+const usedWishedIds = new Set(sel.filter(c=>!c.isJoker && c.rank===G.mulaiWished).map(c=>c.id));
+const touchesBomb = findAllBombs(hand).some(b => b.cards.some(bc=>usedWishedIds.has(bc.id)));
+if (touchesBomb && findAllBombs(hand.filter(c=>!usedWishedIds.has(c.id))).length === 0) {
+glog(`Mulai wish — that would break your only bomb; play the bomb itself instead, or a copy that isn't part of it.`, 'bad');
+return;
 }
 }
 }
@@ -5182,8 +5239,7 @@ const seat = G.hotSeatActive;
 if (!G.currentSet) { glog('Must play on lead.','bad'); return; }
 if (G.mulaiWished && G.currentSet) {
 const hand = G.handA[seat];
-const wishedCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === G.mulaiWished);
-if (wishedCards.length > 0 && canFulfillWish(hand, wishedCards, G.currentSet)) {
+if (getWishFulfillPlay(hand, G.mulaiWished, G.currentSet)) {
 glog(`Mulai wish — you must play rank ${RANK_NAME[G.mulaiWished]||G.mulaiWished}, cannot pass.`, 'bad');
 return;
 }
@@ -5721,7 +5777,7 @@ glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${succe
 }
 }
 }
-if ((G.nPlayers===3||G.nPlayers===5) && seat===G.doubleHandSeat) {
+if (G.nPlayers===3 && seat===G.doubleHandSeat) {
 glog(`${SEAT_NAME_HTML(seat)} went out — keeps banked hand!`, 'good');
 }
 const stillIn = allSeats().filter(s => !G.outOrder.includes(s));
@@ -6005,10 +6061,14 @@ glog(`${SEAT_NAME_HTML(s)}: −${garudaPen}☢︎ from ${garudaCount} captured G
 // Arrow VP (Naga always; other Arrow-type cards in BZF mode only) is a catch-up mechanic,
 // not a skill signal — captured value is pooled and shared rather than credited fully to
 // individual teams. Solo seats (true-Solo or Cutthroat-Solo) make their own captures inert:
-// contributing nothing to anyone. Lovers/Pan-designated pairs keep their own combined
-// captures private, split only between the two of them, exempt from the shared table pool.
-// All splits use 5 VP increments (the base Arrow unit) with any remainder going to the
-// lowest-scoring member of that group, so the division is easy to do by hand at a real table.
+// contributing nothing to anyone, in any pool. Every other affiliated seat shares one
+// table-wide pool regardless of which specific team they're on. On top of that, each active
+// Lovers/Pan pairing forms its own separate, additive 2-person pool from just those two
+// seats' own captures — nothing is removed from the team pool to fund it, and a seat in
+// several pairings (no cap) draws a share from every one of them. All splits use 5 VP
+// increments (the base Arrow unit); the team-wide pool's remainder goes to the lowest-scoring
+// member of that group, while each private pair's remainder goes to whichever of the two
+// personally captured more — so the division is easy to do by hand at a real table either way.
 if (!G.arrowDisabled && G.outOrder.length > 0) {
 const perSeatArrow = {};
 allSeats().forEach(s => { perSeatArrow[s] = (G.capturedCards[s]||[]).filter(c => c.role === ROLES.Naga).length * 25; });
@@ -6018,21 +6078,30 @@ perSeatArrow[s] += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow)
 .reduce((sum, c) => sum + (c.rank === 14 ? -10 : 5), 0);
 });
 }
-const distribute = (seats, groupLabel) => {
+const distribute = (seats, groupLabel, remainderToHighestCapture) => {
 const total = seats.reduce((sum, s) => sum + perSeatArrow[s], 0);
 if (total === 0) return;
 const base = Math.floor(total / seats.length / 5) * 5;
 const remainder = total - base * seats.length;
-const lowest = [...seats].sort((a,b) => (G.totalVP[a]||0) - (G.totalVP[b]||0))[0];
+const target = remainderToHighestCapture
+? [...seats].sort((a,b) => (perSeatArrow[b]||0) - (perSeatArrow[a]||0))[0]
+: [...seats].sort((a,b) => (G.totalVP[a]||0) - (G.totalVP[b]||0))[0];
 seats.forEach(s => {
-const amount = base + (s === lowest ? remainder : 0);
+const amount = base + (s === target ? remainder : 0);
 G.arrowVP[s] = (G.arrowVP[s]||0) + amount;
 G.vp[s] = (G.vp[s]||0) + amount;
 });
-glog(`${groupLabel}: ${base} each${remainder ? `, +${remainder} extra to ${SEAT_NAME(lowest)}` : ''}.`);
+glog(`${groupLabel}: ${base} each${remainder ? `, +${remainder} extra to ${SEAT_NAME(target)}` : ''}.`);
 };
 const soloSeats = allSeats().filter(s => G.affiliations[s] === 'solo');
-const privatePairs = (G.arrowPrivatePairs||[]).filter(([a,b]) => !soloSeats.includes(a) && !soloSeats.includes(b));
+const seenPairKeys = new Set();
+const privatePairs = (G.arrowPrivatePairs||[]).filter(([a,b]) => {
+if (soloSeats.includes(a) || soloSeats.includes(b)) return false;
+const key = [a,b].sort((x,y)=>x-y).join(',');
+if (seenPairKeys.has(key)) return false;
+seenPairKeys.add(key);
+return true;
+});
 const pairedSeats = new Set();
 privatePairs.forEach(([a,b]) => { pairedSeats.add(a); pairedSeats.add(b); });
 // Suit-bonus Majors (Magus/Priestess/Empress/Emperor/Moon/Sun) and Cosmos award Arrow VP
@@ -6042,9 +6111,9 @@ allSeats().forEach(s => {
 const extra = G.pendingArrowExtra?.[s] || 0;
 if (extra !== 0) perSeatArrow[s] += pairedSeats.has(s) ? extra * 2 : extra;
 });
-const generalSeats = allSeats().filter(s => !soloSeats.includes(s) && !pairedSeats.has(s));
-if (generalSeats.length > 0) distribute(generalSeats, `Shared Arrow pool (${generalSeats.length} players)`);
-privatePairs.forEach(([a,b]) => distribute([a,b], `Lovers/Pan private Arrow pool (${SEAT_NAME(a)}+${SEAT_NAME(b)})`));
+const generalSeats = allSeats().filter(s => !soloSeats.includes(s));
+if (generalSeats.length > 0) distribute(generalSeats, `Shared Arrow pool (${generalSeats.length} players)`, false);
+privatePairs.forEach(([a,b]) => distribute([a,b], `Lovers/Pan private Arrow pool (${SEAT_NAME(a)}+${SEAT_NAME(b)})`, true));
 }
 if (G.scoreMode === 'bzf') {
 allSeats().forEach(s => {
@@ -6327,10 +6396,10 @@ return;
 }
 const hand = G.handA[seat];
 if (!hand.length) { checkGoOut(seat); return; }
-if (G.mulaiWished && G.currentSet && !G.currentSet.isBomb) {
+if (G.mulaiWished && G.currentSet) {
 const wished = G.mulaiWished;
 const wishedCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === wished);
-if (wishedCards.length > 0 && canFulfillWish(hand, wishedCards, G.currentSet)) {
+if (wishedCards.length > 0 && getWishFulfillPlay(hand, wished, G.currentSet)) {
 if (aiExecuteWishPlay(seat)) return;
 }
 }
@@ -6343,56 +6412,11 @@ aiRespond(seat);
 function aiExecuteWishPlay(seat) {
 const hand = G.handA[seat];
 const curr = G.currentSet;
-if (!curr || curr.isBomb || !G.mulaiWished) return false;
-const wished = G.mulaiWished;
-const wishedCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === wished);
-if (!wishedCards.length) return false;
-const prevRankW = curr.topRank || curr.rank || 0;
-const currTypeW = curr.type;
-const currLenW  = curr.len || curr.cards?.length || 1;
-const px = hand.find(c => c.role === ROLES.Garuda);
-if (currTypeW === 'Single') {
-for (const wc of wishedCards) {
-const s = validateSet([wc], prevRankW);
-if (s && canFollow(s, curr)) { playCards(seat, [wc], s); return true; }
-}
-if (px) {
-for (const wc of wishedCards) {
-const s = validateSet([wc, px], prevRankW);
-if (s && canFollow(s, curr)) { playCards(seat, [wc, px], s); return true; }
-}
-}
-}
-if (currTypeW === 'Pair' || currTypeW === 'Triple') {
-const needed = currTypeW === 'Pair' ? 2 : 3;
-if (wishedCards.length >= needed) {
-const s = validateSet(wishedCards.slice(0, needed), prevRankW);
-if (s && canFollow(s, curr)) { playCards(seat, wishedCards.slice(0, needed), s); return true; }
-}
-if (px && wishedCards.length >= needed - 1) {
-const combo = [...wishedCards.slice(0, needed - 1), px];
-const s = validateSet(combo, prevRankW);
-if (s && canFollow(s, curr)) { playCards(seat, combo, s); return true; }
-}
-}
-if (currTypeW === 'Straight') {
-const nats = hand.filter(c => !c.isJoker).sort((a,b) => a.rank - b.rank);
-for (let i = 0; i < nats.length; i++) {
-let run = [nats[i]];
-for (let j = i+1; j < nats.length; j++) {
-if (nats[j].rank === run[run.length-1].rank + 1) run.push(nats[j]);
-else break;
-}
-if (run.length >= currLenW && run.some(c => c.rank === wished)) {
-const seg = run.slice(0, currLenW);
-if (seg.some(c => c.rank === wished)) {
-const s = validateSet(seg, prevRankW);
-if (s && canFollow(s, curr)) { playCards(seat, seg, s); return true; }
-}
-}
-}
-}
-return false;
+if (!curr || !G.mulaiWished) return false;
+const fulfill = getWishFulfillPlay(hand, G.mulaiWished, curr);
+if (!fulfill) return false;
+playCards(seat, fulfill.cards, fulfill.set);
+return true;
 }
 function aiStrategicLeadFilter(seat, candidates, diff, hand) {
 if (diff === 'easy') return candidates;
@@ -9101,11 +9125,18 @@ function buildSeatToken(seat, isBottom) {
 const token = document.createElement('div');
 token.className = 'seat-token';
 token.id = 'seat-token-' + seat;
-const myTeam = G.team1?.includes(seat) ? 'team1' : G.team2?.includes(seat) ? 'team2' :
+const inTeamFormation = G.phase === 'teamselection' && G.affiliations;
+const myTeam = inTeamFormation
+? (G.affiliations[seat] === 'blue' ? 'team1' : G.affiliations[seat] === 'red' ? 'team2' :
+G.affiliations[seat] === 'green' ? 'team-green' : G.affiliations[seat] === 'yellow' ? 'team4' :
+G.affiliations[seat] === 'orange' ? 'team5' : G.affiliations[seat] === 'solo' ? 'solo' : '')
+: (G.team1?.includes(seat) ? 'team1' : G.team2?.includes(seat) ? 'team2' :
 G.teamGreen?.includes(seat) ? 'team-green' :
 G.teamYellow?.includes(seat) ? 'team4' :
 G.teamOrange?.includes(seat) ? 'team5' :
-(G.soloSeats?.includes(seat) ? 'solo' : '');
+(G.soloSeats?.includes(seat) ? 'solo' : ''));
+const isTeamLead = inTeamFormation &&
+(seat === G.teamBlueLeader || seat === G.teamRedLeader || seat === G.teamGreenLeader);
 const isActive = seat === G.activeSeat;
 const isDoubleHand = seat === G.doubleHandSeat || (G.nPlayers === 2);
 const bankCards = G.handB[seat] || [];
@@ -9119,12 +9150,16 @@ const isTrickWinner = G.phase === 'trickplay' && G.trickWinner === seat
 && G.trickCards.length > 0;
 const isLeadPassTarget = G.leadPassMode && G.leadPassMode.availableSeats.has(seat);
 const isLeadPassDimmed = G.leadPassMode && !G.leadPassMode.availableSeats.has(seat);
+const isAffilPreviewTarget = G.aiAffilPreview && !G.aiAffilPreview.chosenSeat && G.aiAffilPreview.availableSeats.has(seat);
+const isAffilPreviewChosen = G.aiAffilPreview && G.aiAffilPreview.chosenSeat === seat;
 chip.className = 'seat-token-chip' +
 (myTeam ? ' ' + myTeam : '') +
 (isActive ? ' active' : '') +
 (isTrickWinner ? ' trick-winner' : '') +
 (isLeadPassTarget ? ' lead-pass-target' : '') +
-(isLeadPassDimmed ? ' lead-pass-dimmed' : '');
+(isLeadPassDimmed ? ' lead-pass-dimmed' : '') +
+(isAffilPreviewTarget ? ' affil-preview-target' : '') +
+(isAffilPreviewChosen ? ' affil-preview-chosen' : '');
 if (isLeadPassTarget) {
 chip.addEventListener('click', () => selectLeadPassSeat(seat));
 chip.addEventListener('touchend', (e) => { e.preventDefault(); selectLeadPassSeat(seat); });
@@ -9133,6 +9168,12 @@ const nameEl = document.createElement('div');
 nameEl.className = 'seat-token-name' + (myTeam ? ' ' + myTeam : '');
 nameEl.textContent = SEAT_NAME(seat);
 chip.appendChild(nameEl);
+if (isTeamLead) {
+const leadEl = document.createElement('div');
+leadEl.className = 'seat-token-lead-mark';
+leadEl.textContent = '👑 Lead';
+chip.appendChild(leadEl);
+}
 const vpEl = document.createElement('div');
 vpEl.className = 'seat-token-vp';
 vpEl.style.color = myTeam === 'team1' ? 'var(--pas-team1)' : myTeam === 'team2' ? 'var(--pas-team2)' : myTeam === 'team-green' ? 'var(--green)' : 'var(--text2)';
@@ -9188,8 +9229,9 @@ const banner = document.getElementById('lead-pass-banner');
 const msg    = document.getElementById('lead-pass-msg');
 const cancel = document.getElementById('lead-pass-cancel-btn');
 if (banner) {
-msg.textContent = type === 'fool'
-? 'Fool: tap any seat to pass the lead'
+msg.textContent = type === 'fool' ? 'Fool: tap any seat to pass the lead'
+: type === 'lovers' ? 'Lovers: tap a highlighted seat to invite them to your team'
+: type === 'pan'    ? 'Pan: tap a highlighted seat to force them onto your team'
 : 'Anjing: tap a highlighted seat to pass the lead';
 cancel.style.display = type === 'fool' ? '' : 'none';
 banner.classList.add('visible');
