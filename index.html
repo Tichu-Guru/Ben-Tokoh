@@ -130,7 +130,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v218</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v220</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -3210,7 +3210,7 @@ assignProvisionalTeams();
 // can correctly tell who hasn't been privately paired via Lovers/Pan yet.
 G.affiliations = Array(G.nPlayers).fill(null);
 G.unaffiliatedSeats = allSeats();
-} else if (G.handNum === 1) {
+} else if (G.handNum === 1 || G.nPlayers === 3 || G.nPlayers === 5) {
 assignProvisionalTeams();
 G.teamBlue        = [...G.team1];
 G.teamRed         = [...G.team2];
@@ -3837,10 +3837,9 @@ advanceToDefaultTeamAssignment();
 return;
 }
 const isPan    = card.ma.fx === 'pan';
-const blueRedLeads = [G.teamBlueLeader, G.teamRedLeader].filter(s => s != null);
 const panPartnerSeats = allSeats().filter(s => G.affiliations[s] === 'orange');
 const validTargets = isPan
-? allSeats().filter(s => s !== seat && !blueRedLeads.includes(s))
+? allSeats().filter(s => s !== seat)
 : allSeats().filter(s => s !== seat && !panPartnerSeats.includes(s));
 if (!validTargets.length) {
 glog(`${SEAT_NAME_HTML(seat)} ${card.ma.id}: no valid targets — card retained.`, 'imp');
@@ -3848,6 +3847,24 @@ processNextAffilPlayer(); return;
 }
 const executeInvite = (target) => {
 if (isPan) {
+[G.teamBlueLeader, G.teamRedLeader].forEach((leaderSeat, idx) => {
+if (leaderSeat === null) return;
+if (leaderSeat !== seat && leaderSeat !== target) return;
+const colorName = idx === 0 ? 'Blue' : 'Red';
+const colorArr  = idx === 0 ? G.teamBlue : G.teamRed;
+const leftover  = colorArr.filter(s => s !== seat && s !== target);
+leftover.forEach(s => {
+G.affiliations[s] = 'solo';
+if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
+});
+if (idx === 0) { G.teamBlue = []; G.teamBlueLeader = null; }
+else           { G.teamRed  = []; G.teamRedLeader  = null; }
+if (leftover.length) {
+glog(`${SEAT_NAME_HTML(leaderSeat)} (${colorName} Lead) is Pan'd — the ${colorName} Team dissolves. ${leftover.map(s=>SEAT_NAME_HTML(s)).join(', ')} go Solo this hand (Arrow VP inert) unless picked up by a later Lovers.`, 'imp');
+} else {
+glog(`${SEAT_NAME_HTML(leaderSeat)} (${colorName} Lead) is Pan'd — the ${colorName} Team dissolves.`, 'imp');
+}
+});
 stripFromAllTeams(seat);
 stripFromAllTeams(target);
 G.unaffiliatedSeats = G.unaffiliatedSeats.filter(s => s !== seat && s !== target);
@@ -4924,6 +4941,10 @@ return;
 playCards(seat, sel, set);
 }
 function playCards(seat, cards, set) {
+if (set && set.isBomb && G.currentSet && !canFollow(set, G.currentSet)) {
+glog(`${SEAT_NAME_HTML(seat)}'s bomb does not beat the current meld — play rejected.`, 'bad');
+return;
+}
 if (set && set.isBomb) {
 const wasCurrentBomb = !!(G.currentSet && G.currentSet.isBomb);
 G.bombChainCount = wasCurrentBomb ? (G.bombChainCount||0) + 1 : 1;
@@ -6283,6 +6304,39 @@ glog(`${SEAT_NAME_HTML(seat)} declares Tokoh — all opponents locked into Cukon
 }
 
 function aiTakeTurn(seat) {
+try {
+aiTakeTurnInner(seat);
+} catch (e) {
+console.error('aiTakeTurn error:', e);
+glog(`⚠ ${SEAT_NAME_HTML(seat)} hit an internal error and recovered automatically (${e.message||e}).`, 'bad');
+try {
+if (G.phase !== 'trickplay') return;
+if (G.currentSet) {
+// Not leading — passing is (almost) always legal as a fallback.
+registerPass(seat);
+} else {
+// Leading — play the single lowest legal natural card we can find.
+const hand = G.handA[seat] || [];
+const nats = hand.filter(c => !c.isJoker).sort((a,b)=>(a.rank||0)-(b.rank||0));
+for (const c of nats) {
+const s = validateSet([c]);
+if (s) { playCards(seat, [c], s); return; }
+}
+// No natural cards at all (rare) — try any single card in hand.
+if (hand.length) {
+const s = validateSet([hand[0]]);
+if (s) { playCards(seat, [hand[0]], s); return; }
+}
+// Truly nothing playable — end the trick rather than freeze.
+checkTrickEnd(seat, false);
+}
+} catch (e2) {
+console.error('aiTakeTurn fallback also failed:', e2);
+glog(`⚠ ${SEAT_NAME_HTML(seat)} could not recover — please use New Game if the game is stuck.`, 'bad');
+}
+}
+}
+function aiTakeTurnInner(seat) {
 if (G.phase !== 'trickplay') return;
 if (G.bombInterrupt) return;
 if (NET.mode==='host' && NET.started && NET.remoteSeats[seat]){
@@ -7225,6 +7279,12 @@ if (G.nPlayers === 2) {
 const pool2P=[...strategicLowSingles,...strategicLowNonSingles,...strategicHighAll].filter(gcFilter);
 if (pool2P.length){playCards(seat,pool2P[0].cards,pool2P[0].set);return;}
 } else {
+if (strategicLowSingles.length>0 && gcFilter(strategicLowSingles[0])) {
+const cand = strategicLowSingles[0];
+const remainingAfter = hand.filter(c => !cand.cards.some(x=>x.id===c.id));
+const retainsTopper = extractCandidateMelds(remainingAfter).some(m => isUnbeatableByOthers(m, seat));
+if (retainsTopper) { playCards(seat, cand.cards, cand.set); return; }
+}
 if (strategicLowNonSingles.length>0&&gcFilter(strategicLowNonSingles[0])){
 playCards(seat,strategicLowNonSingles[0].cards,strategicLowNonSingles[0].set);return;
 }
@@ -7430,9 +7490,13 @@ function aiRespond(seat) {
 const hand = G.handA[seat];
 const curr = G.currentSet;
 if (!curr) { aiLead(seat); return; }
-// Mulai wish is mandatory whenever fulfillable (bombs remain exempt, per the
-// same rule that governs human play) — this must be checked before ANY of the
-// pass-trigger logic below, since none of those individually account for it.
+// Mulai wish is mandatory even when curr is a bomb — matching human validation
+// (getWishFulfillPlay/doPlay), which forces a legal wish-fulfilling bomb rather
+// than exempting bombs. Checked first, before ANY pass-trigger logic below.
+if (G.mulaiWished && curr.isBomb) {
+const bombFulfill = getWishFulfillPlay(hand, G.mulaiWished, curr);
+if (bombFulfill) { playCards(seat, bombFulfill.cards, bombFulfill.set); return; }
+}
 if (G.mulaiWished && !curr.isBomb) {
 const wishedRank = G.mulaiWished;
 const wishedNatCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === wishedRank);
