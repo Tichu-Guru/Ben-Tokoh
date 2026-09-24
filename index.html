@@ -130,7 +130,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v220</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v221</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -5721,53 +5721,47 @@ G.outVP[seat] = (G.outVP[seat]||0) + outBonus;
 G.vp[seat] = (G.vp[seat]||0) + outBonus;
 }
 }
-// Declaration bonuses/penalties are halved for every player count (changed v204) —
-// originally 5P/6P-only, now applied universally per design decision.
-const declScale = 0.5;
+// Declaration bonuses/penalties (v221+): flat declarer/teammate rates, no
+// player-count scaling.
 if (G.decl[seat]==='tichu'||G.decl[seat]==='grandTichu') {
 const isGT = G.decl[seat]==='grandTichu';
 const teamArr = G.teamBlue?.includes(seat)?G.teamBlue:G.teamRed?.includes(seat)?G.teamRed:G.teamGreen?.includes(seat)?G.teamGreen:G.teamYellow?.includes(seat)?G.teamYellow:G.teamOrange?.includes(seat)?G.teamOrange:[seat];
 const isOrangeGT = G.teamOrange?.includes(seat) && isGT;
-const isFirstGT = G.firstGTDeclarer[seat] === seat;
+// Flat declarer/teammate rates (v221+) — no 1st/2nd-declarer split; every
+// declaration scores independently at these rates. Pan-forced GT uses its own,
+// lower rates since the partner didn't choose the pairing.
+const declSuccess = isOrangeGT ? 50 : (isGT ? 100 : 75);
+const declFail     = isOrangeGT ? -50 : (isGT ? -100 : -75);
+const teamSuccess  = isOrangeGT ? 50 : (isGT ? 80 : 55);
+const teamFail     = isOrangeGT ? -30 : (isGT ? -60 : -25);
 if (pos===1) {
-const baseBonus = Math.floor((isGT ? (isOrangeGT ? 200 : 150) : 100) * declScale);
-const bonus = baseBonus;
-if (isFirstGT || G.nPlayers === 2) {
-// First declarer or 2P: full bonus to all teammates
-teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)+bonus; G.declVP[s]=(G.declVP[s]||0)+bonus; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+bonus; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! +${bonus} VP${isOrangeGT?' (Pan 1.5× bonus)':' each teammate'}.`,'good');
-} else {
-// Second declarer: full bonus to self, half to teammates
-const halfBonus = Math.floor(bonus / 2);
-G.vp[seat]=(G.vp[seat]||0)+bonus; G.declVP[seat]=(G.declVP[seat]||0)+bonus; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)+bonus;
-teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+halfBonus; G.declVP[s]=(G.declVP[s]||0)+halfBonus; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+halfBonus; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! (2nd declarer) +${bonus} VP to ${SEAT_NAME(seat)}, +${halfBonus} VP each teammate.`,'good');
+G.vp[seat]=(G.vp[seat]||0)+declSuccess; G.declVP[seat]=(G.declVP[seat]||0)+declSuccess; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)+declSuccess;
+if (G.nPlayers !== 2) {
+teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+teamSuccess; G.declVP[s]=(G.declVP[s]||0)+teamSuccess; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+teamSuccess; });
 }
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} SUCCESS! +${declSuccess} VP${G.nPlayers!==2?`, +${teamSuccess} VP each teammate`:''}${isOrangeGT?' (Pan rate)':''}.`,'good');
 } else {
-const pen = Math.floor((isGT ? (isOrangeGT ? 150 : 100) : 50) * declScale);
-const declPen = Math.floor((isGT ? (isOrangeGT ? 200 : 150) : 100) * declScale);
 if (G.nPlayers === 2) {
 const opp = allSeats().find(s => s !== seat);
 if (opp !== undefined) {
-G.vp[opp]=(G.vp[opp]||0)+declPen; G.declVP[opp]=(G.declVP[opp]||0)+declPen; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+declPen;
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${declPen} VP to ${SEAT_NAME_HTML(opp)}.`,'bad');
+const oppGain = -declFail;
+G.vp[opp]=(G.vp[opp]||0)+oppGain; G.declVP[opp]=(G.declVP[opp]||0)+oppGain; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+oppGain;
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${oppGain} VP to ${SEAT_NAME_HTML(opp)}.`,'bad');
 }
-} else if (isFirstGT) {
-G.vp[seat]=(G.vp[seat]||0)-declPen; G.declVP[seat]=(G.declVP[seat]||0)-declPen; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)-declPen;
-teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)-pen; G.declVP[s]=(G.declVP[s]||0)-pen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-pen; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(seat)}, −${pen} VP each other teammate${isOrangeGT?' (Pan 1.5× penalty)':''}.`,'bad');
 } else {
-G.vp[seat]=(G.vp[seat]||0)-declPen; G.declVP[seat]=(G.declVP[seat]||0)-declPen; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)-declPen;
-glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(seat)} only (subsequent declarer).`,'bad');
+G.vp[seat]=(G.vp[seat]||0)+declFail; G.declVP[seat]=(G.declVP[seat]||0)+declFail; G.gtDeclVP[seat]=(G.gtDeclVP[seat]||0)+declFail;
+teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+teamFail; G.declVP[s]=(G.declVP[s]||0)+teamFail; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+teamFail; });
+glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! ${declFail} VP to ${SEAT_NAME(seat)}, ${teamFail} VP each other teammate${isOrangeGT?' (Pan rate)':''}.`,'bad');
 }
 }
 }
 if (G.decl[seat]==='cukong'||G.decl[seat]==='grandCukong') {
 const isGC = G.decl[seat]==='grandCukong';
 const teamArr = G.teamBlue?.includes(seat)?G.teamBlue:G.teamRed?.includes(seat)?G.teamRed:G.teamGreen?.includes(seat)?G.teamGreen:[seat];
-const isFirstC = G.firstCDeclarer[seat] === seat;
-const amount = Math.floor((isGC ? 50 : 30) * declScale);
-const successAmount = Math.floor((isGC ? 75 : 55) * declScale);
+const declSuccess = isGC ? 75 : 50;
+const declFail    = isGC ? -50 : -30;
+const teamSuccess = isGC ? 50 : 25;
+const teamFail    = isGC ? -30 : -5;
 const succeeded = pos===2 || pos===3;
 if (G._gcScoredSeats && G._gcScoredSeats.has(seat)) {
 glog(`[GUARD] ${SEAT_NAME(seat)} GC/C already scored this hand — skipping.`, 'bad');
@@ -5775,26 +5769,13 @@ glog(`[GUARD] ${SEAT_NAME(seat)} GC/C already scored this hand — skipping.`, '
 if (!G._gcScoredSeats) G._gcScoredSeats = new Set();
 G._gcScoredSeats.add(seat);
 if (succeeded) {
-if (isFirstC) {
-// First declarer: full amount to all teammates
-teamArr.forEach(s=>{ G.vp[s]=(G.vp[s]||0)+successAmount; G.declVP[s]=(G.declVP[s]||0)+successAmount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+successAmount; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! +${successAmount} VP each teammate.`,'good');
+G.vp[seat]=(G.vp[seat]||0)+declSuccess; G.declVP[seat]=(G.declVP[seat]||0)+declSuccess; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)+declSuccess;
+teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+teamSuccess; G.declVP[s]=(G.declVP[s]||0)+teamSuccess; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+teamSuccess; });
+glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! +${declSuccess} VP to ${SEAT_NAME(seat)}, +${teamSuccess} VP each teammate.`,'good');
 } else {
-// Second declarer: full to self, half to teammates
-const halfAmount = Math.floor(successAmount / 2);
-G.vp[seat]=(G.vp[seat]||0)+successAmount; G.declVP[seat]=(G.declVP[seat]||0)+successAmount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)+successAmount;
-teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+halfAmount; G.declVP[s]=(G.declVP[s]||0)+halfAmount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+halfAmount; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} SUCCESS! (2nd declarer) +${successAmount} VP to ${SEAT_NAME(seat)}, +${halfAmount} VP each teammate.`,'good');
-}
-} else {
-if (isFirstC) {
-G.vp[seat]=(G.vp[seat]||0)-successAmount; G.declVP[seat]=(G.declVP[seat]||0)-successAmount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)-successAmount;
-teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)-amount; G.declVP[s]=(G.declVP[s]||0)-amount; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-amount; });
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${successAmount} VP to ${SEAT_NAME(seat)}, −${amount} VP each other teammate.`,'bad');
-} else {
-G.vp[seat]=(G.vp[seat]||0)-successAmount; G.declVP[seat]=(G.declVP[seat]||0)-successAmount; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)-successAmount;
-glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${successAmount} VP to ${SEAT_NAME(seat)} only (subsequent declarer).`,'bad');
-}
+G.vp[seat]=(G.vp[seat]||0)+declFail; G.declVP[seat]=(G.declVP[seat]||0)+declFail; G.gcDeclVP[seat]=(G.gcDeclVP[seat]||0)+declFail;
+teamArr.filter(s=>s!==seat).forEach(s=>{ G.vp[s]=(G.vp[s]||0)+teamFail; G.declVP[s]=(G.declVP[s]||0)+teamFail; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+teamFail; });
+glog(`${SEAT_NAME_HTML(seat)} ${isGC?'Grand Cukong':'Cukong'} FAILED! ${declFail} VP to ${SEAT_NAME(seat)}, ${teamFail} VP each other teammate.`,'bad');
 }
 }
 }
@@ -5868,7 +5849,6 @@ return tp;
 }
 function applyFailedDeclarations() {
 const notOut = allSeats().filter(s => !G.outOrder.includes(s));
-const declScale = 0.5;
 notOut.forEach(s => {
 if (!G.decl[s]) return;
 const isGT = G.decl[s] === 'grandTichu';
@@ -5876,53 +5856,31 @@ const isT  = G.decl[s] === 'tichu';
 const isGC = G.decl[s] === 'grandCukong';
 const isC  = G.decl[s] === 'cukong';
 if (isGT || isT) {
-const pen = Math.floor((isGT ? 100 : 50) * declScale);
-const declPen = Math.floor((isGT ? 150 : 100) * declScale);
+const isOrangeGT = G.teamOrange?.includes(s) && isGT;
+const declFail = isOrangeGT ? -50 : (isGT ? -100 : -75);
+const teamFail = isOrangeGT ? -30 : (isGT ? -60 : -25);
 if (G.nPlayers === 2) {
 const opp = allSeats().find(x => x !== s);
 if (opp !== undefined) {
-G.vp[opp]=(G.vp[opp]||0)+declPen; G.declVP[opp]=(G.declVP[opp]||0)+declPen; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+declPen;
-glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${declPen} VP to ${SEAT_NAME_HTML(opp)}.`,'bad');
+const oppGain = -declFail;
+G.vp[opp]=(G.vp[opp]||0)+oppGain; G.declVP[opp]=(G.declVP[opp]||0)+oppGain; G.gtDeclVP[opp]=(G.gtDeclVP[opp]||0)+oppGain;
+glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! +${oppGain} VP to ${SEAT_NAME_HTML(opp)}.`,'bad');
 }
 } else {
 const teamArr = seatTeam(s, [s]);
-const isFirst = G.firstGTDeclarer[s] === s;
-if (isFirst) {
-G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-declPen;
-teamArr.filter(t=>t!==s).forEach(t=>{ G.vp[t]=(G.vp[t]||0)-pen; G.declVP[t]=(G.declVP[t]||0)-pen; G.gtDeclVP[t]=(G.gtDeclVP[t]||0)-pen; });
-glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(s)}, −${pen} VP each other teammate.`,'bad');
-} else {
-G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)-declPen;
-glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! −${declPen} VP to ${SEAT_NAME(s)} only.`,'bad');
-}
+G.vp[s]=(G.vp[s]||0)+declFail; G.declVP[s]=(G.declVP[s]||0)+declFail; G.gtDeclVP[s]=(G.gtDeclVP[s]||0)+declFail;
+teamArr.filter(t=>t!==s).forEach(t=>{ G.vp[t]=(G.vp[t]||0)+teamFail; G.declVP[t]=(G.declVP[t]||0)+teamFail; G.gtDeclVP[t]=(G.gtDeclVP[t]||0)+teamFail; });
+glog(`${SEAT_NAME_HTML(s)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! ${declFail} VP to ${SEAT_NAME(s)}, ${teamFail} VP each other teammate${isOrangeGT?' (Pan rate)':''}.`,'bad');
 }
 } else if (isGC || isC) {
-const pen = Math.floor((isGC ? 50 : 30) * declScale);
-const declPen = Math.floor((isGC ? 75 : 55) * declScale);
+const declFail = isGC ? -50 : -30;
+const teamFail = isGC ? -30 : -5;
 const teamArr = seatTeam(s, [s]);
-const isFirst = G.firstCDeclarer[s] === s;
-if (isFirst) {
-G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-declPen;
-teamArr.filter(t=>t!==s).forEach(t=>{ G.vp[t]=(G.vp[t]||0)-pen; G.declVP[t]=(G.declVP[t]||0)-pen; G.gcDeclVP[t]=(G.gcDeclVP[t]||0)-pen; });
-glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${declPen} VP to ${SEAT_NAME(s)}, −${pen} VP each other teammate.`,'bad');
-} else {
-G.vp[s]=(G.vp[s]||0)-declPen; G.declVP[s]=(G.declVP[s]||0)-declPen; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)-declPen;
-glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! −${declPen} VP to ${SEAT_NAME(s)} only.`,'bad');
-}
+G.vp[s]=(G.vp[s]||0)+declFail; G.declVP[s]=(G.declVP[s]||0)+declFail; G.gcDeclVP[s]=(G.gcDeclVP[s]||0)+declFail;
+teamArr.filter(t=>t!==s).forEach(t=>{ G.vp[t]=(G.vp[t]||0)+teamFail; G.declVP[t]=(G.declVP[t]||0)+teamFail; G.gcDeclVP[t]=(G.gcDeclVP[t]||0)+teamFail; });
+glog(`${SEAT_NAME_HTML(s)} ${isGC?'Grand Cukong':'Cukong'} FAILED! ${declFail} VP to ${SEAT_NAME(s)}, ${teamFail} VP each other teammate.`,'bad');
 }
 });
-if (G.panPairs && G.panPairs.length) {
-G.panPairs.forEach(({initiator, invitee}) => {
-if (G.outOrder[0] !== initiator) {
-[initiator, invitee].forEach(s => {
-G.vp[s] = (G.vp[s]||0) - Math.floor(50 * declScale);
-G.declVP[s] = (G.declVP[s]||0) - Math.floor(50 * declScale);
-G.gtDeclVP[s] = (G.gtDeclVP[s]||0) - Math.floor(50 * declScale);
-});
-glog(`Pan GT FAILED! ${SEAT_NAME_HTML(initiator)} & ${SEAT_NAME_HTML(invitee)} each −${Math.floor(50 * declScale)} VP extra penalty.`, 'bad');
-}
-});
-}
 }
 function endHand() {
 if (_endHandPending) return;
