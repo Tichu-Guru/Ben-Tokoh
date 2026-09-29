@@ -130,7 +130,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v221</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v227</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -2663,7 +2663,7 @@ G.handOverPending = false;
 if (G.resolveTimer) { clearTimeout(G.resolveTimer); G.resolveTimer = null; }
 G.capturedCards= Array(G.nPlayers).fill(null).map(()=>[]);
 G.team1 = []; G.team2 = []; G.soloSeats = [];
-if (G.useMA && G.teamBlue?.length) {
+if (G.teamBlue?.length) {
 G.team1 = [...G.teamBlue];
 G.team2 = [...G.teamRed];
 G.teamGreen.forEach(s => { if (!G.soloSeats.includes(s)) G.soloSeats.push(s); });
@@ -3210,7 +3210,7 @@ assignProvisionalTeams();
 // can correctly tell who hasn't been privately paired via Lovers/Pan yet.
 G.affiliations = Array(G.nPlayers).fill(null);
 G.unaffiliatedSeats = allSeats();
-} else if (G.handNum === 1 || G.nPlayers === 3 || G.nPlayers === 5) {
+} else if (G.handNum === 1) {
 assignProvisionalTeams();
 G.teamBlue        = [...G.team1];
 G.teamRed         = [...G.team2];
@@ -3225,7 +3225,9 @@ G.unaffiliatedSeats = [];
 }
 beginPassing();
 } else {
+if (G.fixedTeams) {
 assignProvisionalTeams();
+}
 G.phase = 'passing';
 beginPassing();
 }
@@ -3633,6 +3635,9 @@ cb();
 function beginPreDealTeamSelectionFixed() {
 G.phase = 'teamselection';
 G._teamSelectionContext = 'preDeal';
+G.decl = Array(G.nPlayers).fill(null);
+G.firstGTDeclarer = Array(G.nPlayers).fill(null);
+G.firstCDeclarer = Array(G.nPlayers).fill(null);
 G.bsAtTeamSelectionStart = allSeats().map(s => [...(G.bs[s]||[])]);
 G.affilActivationsThisHand = 0;
 advanceToPreInviteMA();
@@ -3641,10 +3646,43 @@ function beginPreDealTeamSelection() {
 G.phase = 'teamselection';
 G.bidRanking = [];
 G._teamSelectionContext = 'preDeal';
+G.decl = Array(G.nPlayers).fill(null);
+G.firstGTDeclarer = Array(G.nPlayers).fill(null);
+G.firstCDeclarer = Array(G.nPlayers).fill(null);
+G.affiliations = Array(G.nPlayers).fill(null);
+if (G.nPlayers === 3 || G.nPlayers === 5) {
+// dhs-anchored leader assignment (mirrors assignProvisionalTeams) — the
+// rotating double-hand seat determines the Red Team, not VP. Keeps the
+// pre-deal screen (and any Lovers/Pan/Hermit activated on it) consistent
+// with what actually gets dealt, in both Majors states (v222+).
+const dhs = G.doubleHandSeat ?? 0;
+const others = allSeats().filter(s => s !== dhs);
+if (G.nPlayers === 3) {
+const blueLeader = others.reduce((a, b) => (G.totalVP[a]||0) >= (G.totalVP[b]||0) ? a : b);
+G.teamBlue = [...others]; G.teamRed = [dhs]; G.teamGreen = [];
+G.teamBlueLeader = blueLeader; G.teamRedLeader = dhs; G.teamGreenLeader = null;
+others.forEach(s => G.affiliations[s] = 'blue');
+G.affiliations[dhs] = 'red';
+} else {
+const byDist = [...others].sort((a, b) => {
+const distA = Math.min((a - dhs + G.nPlayers) % G.nPlayers, (dhs - a + G.nPlayers) % G.nPlayers);
+const distB = Math.min((b - dhs + G.nPlayers) % G.nPlayers, (dhs - b + G.nPlayers) % G.nPlayers);
+return distB - distA;
+});
+G.teamBlue = [byDist[2], byDist[3]]; G.teamRed = [dhs, byDist[0], byDist[1]]; G.teamGreen = [];
+G.teamBlueLeader = byDist[2]; G.teamRedLeader = dhs; G.teamGreenLeader = null;
+G.teamBlue.forEach(s => G.affiliations[s] = 'blue');
+G.teamRed.forEach(s => G.affiliations[s] = 'red');
+}
+G.soloSeats = [];
+G.unaffiliatedSeats = [];
+} else {
 const byVP = allSeats()
 .sort((a,b) => (G.totalVP[a]||0) - (G.totalVP[b]||0) || Math.random()-0.5);
 const blueLeader  = byVP[0];
 const redLeader   = byVP[1] ?? null;
+G._origBlueLeader = blueLeader;
+G._origRedLeader  = redLeader;
 G.teamBlue        = [blueLeader];
 G.teamRed         = redLeader != null ? [redLeader] : [];
 G.teamGreen       = [];
@@ -3652,16 +3690,16 @@ G.teamBlueLeader  = blueLeader;
 G.teamRedLeader   = redLeader;
 G.teamGreenLeader = null;
 G.soloSeats       = [];
-G.affiliations = Array(G.nPlayers).fill(null);
 G.affiliations[blueLeader] = 'blue';
 if (redLeader != null) G.affiliations[redLeader] = 'red';
 G.unaffiliatedSeats = allSeats().filter(s => G.affiliations[s] === null);
+}
 G.bsAtTeamSelectionStart = allSeats().map(s => [...(G.bs[s]||[])]);
 G.affilActivationsThisHand = 0;
 glog(
 `Hand ${G.handNum+1} Team Selection — ` +
-`Blue Lead: ${SEAT_NAME(blueLeader)} · ` +
-`Red Lead: ${redLeader != null ? SEAT_NAME(redLeader) : '—'}` +
+`Blue Lead: ${SEAT_NAME(G.teamBlueLeader)} · ` +
+`Red Lead: ${G.teamRedLeader != null ? SEAT_NAME(G.teamRedLeader) : '—'}` +
 `${G.unaffiliatedSeats.length ? ` · Unaffiliated: ${G.unaffiliatedSeats.map(s=>SEAT_NAME(s)).join(', ')}` : ''}`,
 'imp'
 );
@@ -4025,23 +4063,17 @@ G.affiliations[s] = 'solo';
 if (!G.soloSeats.includes(s)) G.soloSeats.push(s);
 glog(`${SEAT_NAME_HTML(s)} left solo (Hard cutthroat — high VP).`, 'imp');
 };
-if (lowScorers.length === 0) {
-// Everyone remaining unaffiliated has crossed the threshold -> all go solo
 cutthroatSeats.forEach(soloOut);
-} else if (lowScorers.length === 1) {
-// Exactly one low scorer -> pairs with the lowest-VP cutthroat seat, pulling that one out of solo
-const sortedCutthroat = [...cutthroatSeats].sort((a,b) => (G.totalVP[a]||0)-(G.totalVP[b]||0));
-const rescuedPartner = sortedCutthroat[0];
-sortedCutthroat.slice(1).forEach(soloOut);
+if (lowScorers.length === 1) {
 const targetTeam = G.teamBlue.length <= G.teamRed.length ? 'blue' : 'red';
-[rescuedPartner, lowScorers[0]].forEach(s => { G.affiliations[s] = targetTeam; teamArrayFor(targetTeam).push(s); });
-glog(`${SEAT_NAME_HTML(lowScorers[0])} pairs with ${SEAT_NAME_HTML(rescuedPartner)} (lowest-VP cutthroat) to form a team.`, 'imp');
-} else {
-// 2+ low scorers -> all cutthroat seats go solo, all low scorers join one shared team together
-cutthroatSeats.forEach(soloOut);
+G.affiliations[lowScorers[0]] = targetTeam; teamArrayFor(targetTeam).push(lowScorers[0]);
+glog(`${SEAT_NAME_HTML(lowScorers[0])} joins the ${targetTeam==='blue'?'Blue':'Red'} Team (no other low-VP partner available).`, 'imp');
+} else if (lowScorers.length >= 2) {
+lowScorers.forEach(s => {
 const targetTeam = G.teamBlue.length <= G.teamRed.length ? 'blue' : 'red';
-lowScorers.forEach(s => { G.affiliations[s] = targetTeam; teamArrayFor(targetTeam).push(s); });
-glog(`${lowScorers.map(s=>SEAT_NAME_HTML(s)).join(', ')} join together as one team (below cutthroat threshold).`, 'imp');
+G.affiliations[s] = targetTeam; teamArrayFor(targetTeam).push(s);
+});
+glog(`${lowScorers.map(s=>SEAT_NAME_HTML(s)).join(', ')} join the Blue/Red Teams, balanced so each Lead gets a partner.`, 'imp');
 }
 unaffiliated = [];
 G.unaffiliatedSeats = [];
@@ -4120,7 +4152,32 @@ showPartnerBar(`${SEAT_NAME_HTML(lead)} invites you to join their team.`,
 setTimeout(()=>doInvite(Math.random() < 0.7), aiDelay()*0.5);
 }
 }
+function ensureLeadsHaveTeammates() {
+// v226+: Blue Lead and Red Lead (the two lowest-VP seats, 4P/6P Dynamic only)
+// must never end up as an unpartnered team-of-one. If Red Lead still has no
+// teammate once everything else (Cutthroat, Lovers/Pan/Hermit, bulk-VP) has
+// resolved, Red Lead joins Blue Lead's current team instead — whatever that
+// is, including an Orange Pan pair (as a third member). Uses the ORIGINAL
+// Lead seats captured at team-selection start, since Pan-vs-Lead dissolution
+// can null out G.teamBlueLeader/G.teamRedLeader before this runs.
+if (G.nPlayers !== 4 && G.nPlayers !== 6) return;
+const origBlue = G._origBlueLeader, origRed = G._origRedLeader;
+if (origBlue == null || origRed == null) return;
+const blueAff = G.affiliations[origBlue];
+const redAff = G.affiliations[origRed];
+if (blueAff == null || redAff == null || blueAff === redAff) return;
+const blueArr = teamArrayFor(blueAff);
+const redArr = teamArrayFor(redAff);
+if (redArr.length === 1 && redArr[0] === origRed) {
+redArr.splice(redArr.indexOf(origRed), 1);
+blueArr.push(origRed);
+G.affiliations[origRed] = blueAff;
+if (G.teamRedLeader === origRed) G.teamRedLeader = null;
+glog(`${SEAT_NAME_HTML(origRed)} (Red Lead) has no teammate \u2014 joins ${SEAT_NAME_HTML(origBlue)}'s team so neither Lead goes solo.`, 'imp');
+}
+}
 function finishTeamFormation() {
+ensureLeadsHaveTeammates();
 if (G.useMA) {
 G.team1 = [...G.teamBlue];
 G.team2 = [...G.teamRed];
@@ -4136,6 +4193,13 @@ glog(
 'imp'
 );
 } else {
+if (G._teamSelectionContext === 'preDeal' && !G.fixedTeams) {
+// New v222 path: Dynamic 4P/6P pre-deal screen decided teams via
+// teamBlue/teamRed — sync them into team1/team2, which non-Majors
+// gameplay logic reads.
+G.team1 = [...G.teamBlue];
+G.team2 = [...G.teamRed];
+}
 if (G.nPlayers === 4 && G.unaffiliatedSeats.length) {
 G.unaffiliatedSeats.forEach(s=>{
 if (G.team1.length<=G.team2.length) G.team1.push(s); else G.team2.push(s);
@@ -6229,7 +6293,7 @@ btn.textContent = gameWinner !== undefined ? 'See Final Results' : 'Next Hand';
 btn.onclick = () => {
 modal.style.display = 'none';
 if (gameWinner !== undefined) showEndScreen();
-else if (G.useMA && !G.fixedTeams) beginPreDealTeamSelection();
+else if (!G.fixedTeams && (G.nPlayers===3 || G.nPlayers===4 || G.nPlayers===5 || G.nPlayers===6)) beginPreDealTeamSelection();
 else if (G.useMA && G.fixedTeams) beginPreDealTeamSelectionFixed();
 else dealHand();
 };
