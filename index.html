@@ -130,7 +130,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v227</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v229</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -4417,7 +4417,8 @@ function aiDoPassing(seat) {
 const targets = getPassTargets(seat);
 const myTeam = seatTeam(seat);
 const calledGT = G.decl[seat] === 'grandTichu';
-const hasDeclared = calledGT || G.decl[seat] === 'grandCukong';
+const hasDeclared = G.decl[seat] === 'grandTichu' || G.decl[seat] === 'grandCukong' ||
+G.decl[seat] === 'tichu' || G.decl[seat] === 'cukong';
 let used = new Set();
 function getMeldProtected(hand) {
 const nats = hand.filter(c => !c.isJoker);
@@ -7659,10 +7660,13 @@ playCards(seat, justSufficient, s); return;
 }
 }
 const noOneOut = G.outOrder.length === 0;
+const declPriorityGT = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
 const gtTeammate = myTeam.find(s =>
 s !== seat && !G.outOrder.includes(s) &&
 (G.decl[s] === 'tichu' || G.decl[s] === 'grandTichu') &&
-isDeclDoable(s)
+isDeclDoable(s) &&
+declPriorityGT(s) > declPriorityGT(seat) &&
+!(diff === 'hard' && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65))
 );
 const hasGTTeammate = gtTeammate !== undefined;
 const cukongCeiling = mustAvoidFirstOut && noOneOut;
@@ -7737,7 +7741,12 @@ G.trickWinner === cukongTeammateRaw && G.outOrder.length === 0 && curr && !curr.
 isUnbeatableByOthers({type:curr.type, len:curr.len||curr.cards?.length||1, topRank:curr.topRank||curr.rank}, cukongTeammateRaw) &&
 !partnerAtRiskOfGoingOut(cukongTeammateRaw) &&
 !cukongTeammateIsCutthroatLeader;
-if (teammateWinning && (cukongShouldPass || rankCeiling || basicTeammatePass || gcPassAfterOut || declaredTeammatePass || cukongToppertPass)) {
+// Equal-C deference: both this AI and the winning teammate declared plain Cukong, and
+// neither 2nd nor 3rd place has been claimed yet — both can still succeed independently,
+// so defer rather than compete for the same trick (previously only strictly-higher
+// declarations triggered deference via basicTeammatePass).
+const equalCBothOpenPass = aiIsC && tmIsC && G.outOrder.length === 0 && winnerStillActive && !cutthroat;
+if (teammateWinning && (cukongShouldPass || rankCeiling || basicTeammatePass || gcPassAfterOut || declaredTeammatePass || cukongToppertPass || equalCBothOpenPass)) {
 const currRankFollow = curr ? (curr.topRank||curr.rank||0) : 0;
 const starVPPlay = hand.find(c => {
 if (c.isJoker || c.isMajorArcana || (c.rank !== 1 && c.rank !== 2)) return false;
@@ -7850,17 +7859,37 @@ const currMeld = {type: curr.type, len: curr.len || curr.cards?.length || 1, top
 const currIsTopper = isUnbeatableByOthers(currMeld, oppSeat);
 // Declaration block only applies when this play is a genuine topper (unbeatable table-wide) —
 // not merely a play the responding AI itself happens to lack a natural answer for.
+const myRemainingAfterBomb = hand.filter(c => !best.cards.some(x=>x.id===c.id));
+const myBestNatSingle = myRemainingAfterBomb.filter(c=>!c.isJoker).reduce((a,c)=>(!a||c.rank>a.rank)?c:a, null);
+const oppBestNatSingle = oppHand.filter(c=>!c.isJoker).reduce((a,c)=>(!a||c.rank>a.rank)?c:a, null);
+const canRegainLeadLater = curr.type === 'Single' && myBestNatSingle &&
+(!oppBestNatSingle || myBestNatSingle.rank > oppBestNatSingle.rank);
 if ((oppDeclLive && currIsTopper) || highValueTrigger || denyMonsterSet) {
 hardShouldBomb = true;
 } else {
-hardShouldBomb = currIsTopper && oppOtherToppers.length === 0;
+hardShouldBomb = currIsTopper && oppOtherToppers.length === 0 && !canRegainLeadLater;
 }
 }
 if (hardShouldBomb) {
+// Conservation: if a teammate's hand already holds a natural (non-bomb) answer to
+// this exact set, save the bomb — they can reclaim the lead for the team instead.
+// Does not apply if this bomb would let US go out right now (going out trumps
+// conserving a resource someone else might use later).
+const wouldGoOutNow = hand.length === best.cards.length;
+const teammateCanCover = !wouldGoOutNow && myTeam.some(s => {
+if (s === seat || G.outOrder.includes(s)) return false;
+const tHand = G.handA[s] || [];
+return extractCandidateMelds(tHand).some(m =>
+canFollow({type:m.type, len:m.len, topRank:m.topRank, isBomb:false}, curr)
+);
+});
+if (teammateCanCover) {
+// Skip this bomb — a teammate already has a natural way to retake the trick.
+}
 // GC/C declared: blocking an opponent's GT/T is smart, but if this bomb would empty
 // our hand (forcing us to go out 1st), we need Anjing/Fool in the REMAINING hand
 // to redirect the lead to an undeclared teammate instead of going out ourselves.
-if (hasCukongDecl) {
+else if (hasCukongDecl) {
 const wouldGoOut = hand.length === best.cards.length;
 if (wouldGoOut) {
 const remaining = hand.filter(c => !best.cards.find(x=>x.id===c.id));
@@ -7877,8 +7906,13 @@ activateSuitBonusForBomb(seat, best.cards);
 playCards(seat, best.cards, best); return;
 }
 } else {
+const wouldGoOutBlockingGT = hasGTTeammate && hand.length === best.cards.length;
+if (wouldGoOutBlockingGT) {
+// Skip this bomb — going out ourselves would fail our teammate's doable GT/T.
+} else {
 activateSuitBonusForBomb(seat, best.cards);
 playCards(seat, best.cards, best); return;
+}
 }
 }
 }
@@ -7950,7 +7984,7 @@ const currLen  = curr.len || curr.cards?.length || 1;
 const prevRank = currRank;
 const nats = hand.filter(c => !c.isJoker);
 const px = hand.find(c => c.role === ROLES.Garuda);
-if (diff === 'hard' && curr && !curr.isBomb && hasGTTeammate && opponentWinning && aiUndeclared) {
+if (diff === 'hard' && curr && !curr.isBomb && hasGTTeammate && opponentWinning && currLen <= 3) {
 const meldType = curr.type;
 const declSeat = gtTeammate;
 const declHasPassed = G.gtDeclPassedTypes[declSeat]?.[meldType] === true;
@@ -7960,15 +7994,8 @@ const pPlayed = garudaPlayed();
 const allKsPlayed = allRankPlayed(14);
 const allQsPlayed = allRankPlayed(13);
 if (!declHasPassed && !opponentAboutToGoOut) {
-if (meldType === 'Single' && currRank <= 9) {
-} else if (meldType === 'Single' && currRank > 9) {
-if (G.useMA) aiActivateFortuneOnPass(seat);
-if (G.useMA) aiActivateBalanceOnPass(seat);
-if (G.useMA) aiActivateTransfigOnPass(seat);
-G.trickPassed[seat] = true; recordGTDeclPass(seat);
-glog(`${SEAT_NAME_HTML(seat)} passes (GT support Phase 1 — waiting for declarer).`);
-render(); checkTrickEnd(seat, false); return;
-} else {
+if (currRank <= 9) {
+} else if (currRank > 9) {
 if (G.useMA) aiActivateFortuneOnPass(seat);
 if (G.useMA) aiActivateBalanceOnPass(seat);
 if (G.useMA) aiActivateTransfigOnPass(seat);
@@ -8181,9 +8208,14 @@ if (!selfInterestWins) {
 const weakestRescueBomb = rescueBombs.reduce((a,b) =>
 (b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a
 );
+if (hand.length === weakestRescueBomb.cards.length) {
+// Skip — rescuing would empty our own hand, going out ahead of the teammate we're
+// trying to protect and failing their declaration anyway.
+} else {
 glog(`${SEAT_NAME_HTML(seat)} bombs to rescue teammate's GT/T from ${SEAT_NAME_HTML(G.trickWinner)}!`, 'imp');
 activateSuitBonusForBomb(seat, weakestRescueBomb.cards);
 playCards(seat, weakestRescueBomb.cards, weakestRescueBomb); return;
+}
 }
 }
 }
