@@ -130,7 +130,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v229</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v241</div>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -231,6 +231,24 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
       </button>
       <button class="toggle-btn active-ma" id="dup-off-btn" onclick="setDuplicates(false)">
         Standard (15 cards/suit)
+      </button>
+    </div>
+  </div>
+
+  <div class="start-section">
+    <div class="start-label">Bomb Types Allowed</div>
+    <div class="toggle-row">
+      <button class="toggle-btn active-ma" id="bomb-nofh-btn" onclick="toggleBombRestrict('nonFullHouse')"
+        title="Full House Bombs (suit-distinct Triple+Pair or Quad+Pair) are never legal, regardless of size.">
+        ☑ Non-Full House
+      </button>
+      <button class="toggle-btn active-ma" id="bomb-5plus-btn" onclick="toggleBombRestrict('fivePlus')"
+        title="Any bomb under 5 cards (a 4-card Quad, a 4-card Straight Flush, a 4-card Sequential-Group Bomb) is not legal.">
+        ☑ 5+ Cards
+      </button>
+      <button class="toggle-btn" id="bomb-all-btn" onclick="toggleBombRestrict('allAllowed')"
+        title="No restrictions — every known bomb type at every legal size, including Full House Bombs and 4-card bombs.">
+        ☐ All Allowed
       </button>
     </div>
   </div>
@@ -768,7 +786,7 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'Pan',      n:15, t:'PreDeal',     fx:'pan',       d:'PreDeal: Form Orange Team with any non-lead player. Target receives +25 VP. Activator auto-declares GT at 1.5× stakes (success +150 VP / failure −150 VP to whole Orange Team).'},
 ];
 let G = {};
-let CFG = { nPlayers:4, seats:[], useMA:false, useDuplicates:false, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
+let CFG = { nPlayers:4, seats:[], useMA:false, useDuplicates:false, bombRestrictNonFullHouse:true, bombRestrict5Plus:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
 const shuffle = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
 const uid = () => Math.random().toString(36).slice(2,9);
 const allSeats = () => Array.from({length:G.nPlayers},(_,i)=>i);
@@ -1016,16 +1034,25 @@ const r = effectiveRank(cards[0], 'single');
 return { type:'Single', rank:r, topRank:r, isBomb:false, cards };
 }
 if (n === 2) return tryMultiOrGaruda(cards, 'Pair', 2);
-if (n === 3) return tryMultiOrGaruda(cards, 'Triple', 3);
+if (n === 3) {
+const trip = tryMultiOrGaruda(cards, 'Triple', 3); if (trip) return trip;
+const str3 = tryStraight(cards); if (str3) return str3;
+return null;
+}
 if (n === 4) {
 const q = tryQuad(cards);           if (q) return q;
+const sdb = trySeqGroupBomb(cards, 2); if (sdb) return sdb;
+const sf4 = tryStraightFlush(cards); if (sf4) return sf4;
 const nq = tryNormalSameRank(cards); if (nq) return nq;
 const sd = trySeqDoubles(cards);    if (sd) return sd;
+const str4 = tryStraight(cards);    if (str4) return str4;
 return null;
 }
 if (n === 5) {
 const pent = tryPentadOrHexad(cards, 5);
 if (pent) return pent;
+const fhb = tryFullHouseBomb(cards);
+if (fhb) return fhb;
 const np = tryNormalSameRank(cards); if (np) return np;
 const sf = tryStraightFlush(cards);
 if (sf) return sf;
@@ -1038,11 +1065,17 @@ return null;
 if (n === 6) {
 const hex = tryPentadOrHexad(cards, 6);
 if (hex) return hex;
+const fhb6 = tryFullHouseBomb(cards);
+if (fhb6) return fhb6;
+const sdb6 = trySeqGroupBomb(cards, 2); if (sdb6) return sdb6;
+const stb6 = trySeqGroupBomb(cards, 3); if (stb6) return stb6;
 const ns = tryNormalSameRank(cards); if (ns) return ns;
 const sf = tryStraightFlush(cards);
 if (sf) return sf;
 const str = tryStraight(cards);
 if (str) return str;
+const fh6 = tryFH(cards);
+if (fh6) return fh6;
 const sd = trySeqDoubles(cards);
 if (sd) return sd;
 const st = trySeqTriples(cards);
@@ -1054,6 +1087,8 @@ const hfh = tryHigherFH(cards);
 if (hfh) return hfh;
 const sf = tryStraightFlush(cards);
 if (sf) return sf;
+const sdbN = trySeqGroupBomb(cards, 2); if (sdbN) return sdbN;
+const stbN = trySeqGroupBomb(cards, 3); if (stbN) return stbN;
 const str = tryStraight(cards);
 if (str) return str;
 const sd = trySeqDoubles(cards);
@@ -1076,6 +1111,7 @@ return { type, rank:r, topRank:r, isBomb:false, cards };
 }
 function tryQuad(cards) {
 if (cards.length !== 4) return null;
+if (!bombAllowedByRestrictions('Quad', 4)) return null;
 if (cards.some(c => c.isJoker)) return null;
 const nats = cards.filter(c => !c.isJoker);
 const ranks = new Set(nats.map(c => effectiveRank(c, 'group')));
@@ -1083,7 +1119,7 @@ if (ranks.size !== 1) return null;
 const suits = nats.map(c => c.suit);
 if (new Set(suits).size !== 4) return null;
 const r = effectiveRank(nats[0], 'group');
-return { type:'Quad', rank:r, topRank:r, isBomb:true, bombTier:1, len:4, cards };
+return { type:'Quad', rank:r, topRank:r, isBomb:true, bombTier:41, len:4, cards };
 }
 function tryPentadOrHexad(cards, n) {
 if (cards.length !== n) return null;
@@ -1095,7 +1131,7 @@ const suits = cards.map(c => c.suit);
 if (new Set(suits).size !== n) return null;
 const r = effectiveRank(cards[0], 'group');
 const type = n === 5 ? 'Pentad' : 'Hexad';
-const bombTier = n === 5 ? 2 : 4;
+const bombTier = n*10 + 1;
 return { type, rank:r, topRank:r, isBomb:true, bombTier, len:n, cards };
 }
 function tryNormalSameRank(cards) {
@@ -1115,7 +1151,7 @@ const type = n === 4 ? 'NormalQuad' : n === 5 ? 'NormalPentad' : 'NormalSextad';
 return { type, rank:r, topRank:r, isBomb:false, len:n, cards };
 }
 function tryStraightFlush(cards) {
-if (cards.length < 5) return null;
+if (cards.length < 4) return null;
 if (cards.some(c => c.isJoker)) return null;
 const nats = cards.filter(c => !c.isJoker);
 const suits = new Set(nats.map(c => c.suit));
@@ -1124,12 +1160,13 @@ const ranks = nats.map(c => effectiveRank(c, 'single')).sort((a,b) => a-b);
 if (new Set(ranks).size !== ranks.length) return null;
 for (let i=1; i<ranks.length; i++) if (ranks[i] !== ranks[i-1]+1) return null;
 const len = cards.length;
-const bombTier = len >= 7 ? 6 : len === 6 ? 5 : 3;
+if (!bombAllowedByRestrictions('Bomb_SF', len)) return null;
+const bombTier = len*10 + 3;
 const topR = ranks[ranks.length-1];
 return { type:'Bomb_SF', rank:topR, topRank:topR, isBomb:true, bombTier, len, cards };
 }
 function tryStraight(cards) {
-if (cards.length < 5) return null;
+if (cards.length < 3) return null;
 if (cards.some(c => c.role===ROLES.Naga||c.role===ROLES.Anjing)) return null;
 const px   = cards.find(c => c.role === ROLES.Garuda);
 const mj   = cards.find(c => c.role === ROLES.Mulai);
@@ -1148,7 +1185,7 @@ ranks = [0, ...Array.from({length:hi-lo+1}, (_,i)=>lo+i)];
 } else {
 ranks = [0, ...natRanks, hi+1];
 }
-if (ranks.length < 5) return null;
+if (ranks.length < 3) return null;
 const topR = ranks[ranks.length-1];
 return { type:'Straight', rank:topR, topRank:topR, isBomb:false, len:cards.length, cards };
 }
@@ -1156,7 +1193,7 @@ if (mj && !px) {
 if (natRanks[0] < 1) return null;
 for (let i=1; i<natRanks.length; i++) if (natRanks[i]!==natRanks[i-1]+1) return null;
 ranks = [0, ...natRanks];
-if (ranks.length < 5) return null;
+if (ranks.length < 3) return null;
 const topR = natRanks[natRanks.length-1];
 return { type:'Straight', rank:topR, topRank:topR, isBomb:false, len:cards.length, cards };
 }
@@ -1177,37 +1214,78 @@ ranks = canHigh ? [...natRanks, hi+1] : [lo-1, ...natRanks];
 } else {
 for (let i=1;i<ranks.length;i++) if (ranks[i]!==ranks[i-1]+1) return null;
 }
-if (ranks.length < 5) return null;
+if (ranks.length < 3) return null;
 const topR = ranks[ranks.length-1];
 return { type:'Straight', rank:topR, topRank:topR, isBomb:false, len:cards.length, cards };
 }
 function tryFH(cards) {
-if (cards.length !== 5) return null;
+const n = cards.length;
+if (n !== 5 && n !== 6) return null;
+const bigNeed = n === 5 ? 3 : 4;
 const px   = cards.find(c => c.role === ROLES.Garuda);
 const nats = cards.filter(c => c.role !== ROLES.Garuda);
 const g = {};
 nats.forEach(c => { const r=effectiveRank(c,'group'); g[r]=(g[r]||0)+1; });
 const groups = Object.entries(g).map(([r,cnt])=>({r:+r,cnt})).sort((a,b)=>b.cnt-a.cnt);
+if (groups.length !== 2) return null;
 let triple, pair;
 if (!px) {
-if (groups.length !== 2) return null;
-if (!((groups[0].cnt===3 && groups[1].cnt===2) ||
-(groups[0].cnt===2 && groups[1].cnt===3))) return null;
-triple = groups.find(g=>g.cnt===3);
-pair   = groups.find(g=>g.cnt===2);
+if (!(groups[0].cnt===bigNeed && groups[1].cnt===2)) return null;
+triple = groups[0]; pair = groups[1];
 } else {
-if (groups.length === 2) {
-const [a, b] = groups;
-if (a.cnt===3 && b.cnt===1) { triple=a; pair={r:b.r,cnt:2}; }
-else if (a.cnt===2 && b.cnt===2) { triple={r:a.r,cnt:3}; pair=b; }
-else if (a.cnt===1 && b.cnt===3) { triple=b; pair={r:a.r,cnt:2}; }
+if (groups[0].cnt===bigNeed && groups[1].cnt===1) { triple=groups[0]; pair={r:groups[1].r,cnt:2}; }
+else if (groups[0].cnt===bigNeed-1 && groups[1].cnt===2) { triple={r:groups[0].r,cnt:bigNeed}; pair=groups[1]; }
 else return null;
-} else if (groups.length === 1) {
-return null;
-} else return null;
 }
-if (!triple || !pair) return null;
-return { type:'FullHouse', rank:triple.r, topRank:triple.r, isBomb:false, cards };
+return { type:'FullHouse', rank:triple.r, topRank:triple.r, isBomb:false, len:n, cards };
+}
+function bombAllowedByRestrictions(type, len) {
+if (G.bombRestrictNonFullHouse && type === 'FullHouseBomb') return false;
+if (G.bombRestrict5Plus && len < 5) return false;
+return true;
+}
+function tryFullHouseBomb(cards) {
+if (!bombAllowedByRestrictions('FullHouseBomb', cards.length)) return null;
+// 3+2 (5 cards, needs 5 distinct suits) or 4+2 (6 cards, needs 6 distinct suits).
+// No joker of any kind — bombs never include Garuda.
+const n = cards.length;
+if (n !== 5 && n !== 6) return null;
+if (cards.some(c => c.isJoker)) return null;
+const bigNeed = n === 5 ? 3 : 4;
+const g = {};
+cards.forEach(c => { const r = effectiveRank(c,'group'); g[r] = (g[r]||[]).concat(c); });
+const groups = Object.entries(g).map(([r,cs])=>({r:+r,cards:cs})).sort((a,b)=>b.cards.length-a.cards.length);
+if (groups.length !== 2) return null;
+if (!(groups[0].cards.length === bigNeed && groups[1].cards.length === 2)) return null;
+if (new Set(cards.map(c=>c.suit)).size !== n) return null;
+return { type:'FullHouseBomb', rank:groups[0].r, topRank:groups[0].r, isBomb:true, bombTier:n*10+2, len:n, cards };
+}
+function trySeqGroupBomb(cards, groupSize) {
+// Running groups (pairs/triples) where every rank uses the exact same set of
+// suits as every other rank — i.e. groupSize interlocked straight flushes.
+// No joker of any kind.
+if (cards.length < groupSize*2 || cards.length % groupSize !== 0) return null;
+if (cards.some(c => c.isJoker)) return null;
+const seqType = groupSize === 2 ? 'SeqDoublesBomb' : 'SeqTriplesBomb';
+if (!bombAllowedByRestrictions(seqType, cards.length)) return null;
+const g = {};
+cards.forEach(c => { const r = effectiveRank(c,'group'); g[r]=(g[r]||[]).concat(c); });
+const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b);
+if (ranks.length !== cards.length/groupSize) return null;
+for (let i=1;i<ranks.length;i++) if (ranks[i]!==ranks[i-1]+1) return null;
+let refSuits = null;
+for (const r of ranks) {
+const grp = g[r];
+if (grp.length !== groupSize) return null;
+const suitSet = new Set(grp.map(c=>c.suit));
+if (suitSet.size !== groupSize) return null;
+if (refSuits === null) { refSuits = suitSet; }
+else { for (const s of suitSet) if (!refSuits.has(s)) return null; }
+}
+const topR = ranks[ranks.length-1];
+const type = groupSize === 2 ? 'SeqDoublesBomb' : 'SeqTriplesBomb';
+return { type, rank:topR, topRank:topR, isBomb:true, len:cards.length, groupCount:ranks.length,
+bombTier: cards.length*10+4, cards };
 }
 function tryHigherFH(cards) {
 const n = cards.length;
@@ -1349,9 +1427,10 @@ if (cand.isBomb && curr.isBomb) {
 const cLen = cand.len || cand.cards?.length || 0;
 const xLen = curr.len || curr.cards?.length || 0;
 if (cLen !== xLen) return cLen > xLen;
-const candSF = cand.type === 'Bomb_SF';
-const currSF = curr.type === 'Bomb_SF';
-if (candSF !== currSF) return candSF;
+const bombCatRank = t => ({Quad:1,Pentad:1,Hexad:1,FullHouseBomb:2,Bomb_SF:3,SeqDoublesBomb:4,SeqTriplesBomb:4}[t]||0);
+const candCat = bombCatRank(cand.type);
+const currCat = bombCatRank(curr.type);
+if (candCat !== currCat) return candCat > currCat;
 return (cand.topRank||cand.rank) > (curr.topRank||curr.rank);
 }
 if (cand.type !== curr.type) return false;
@@ -1393,11 +1472,11 @@ let run = [sorted[0]];
 const runs = [];
 for (let i=1;i<sorted.length;i++) {
 if (sorted[i].rank === run[run.length-1].rank+1) run.push(sorted[i]);
-else { if (run.length >= 5) runs.push(run); run=[sorted[i]]; }
+else { if (run.length >= 4) runs.push(run); run=[sorted[i]]; }
 }
-if (run.length >= 5) runs.push(run);
+if (run.length >= 4) runs.push(run);
 for (const r of runs) {
-for (let len=5; len<=r.length; len++) {
+for (let len=4; len<=r.length; len++) {
 for (let s=0; s<=r.length-len; s++) {
 const sl = r.slice(s, s+len);
 const sf = tryStraightFlush(sl);
@@ -1405,6 +1484,63 @@ if (sf) bombs.push(sf);
 }
 }
 }
+}
+// FullHouseBomb: a "big" group (3 or 4) + a pair, all cards distinct suits.
+const suitDedup = arr => Object.values(arr.reduce((m,c)=>{ if(!m[c.suit]) m[c.suit]=c; return m; }, {}));
+const rankKeys = Object.keys(g).map(Number);
+for (const bigNeed of [3,4]) {
+for (const r1 of rankKeys) {
+const d1 = suitDedup(g[r1]);
+if (d1.length < bigNeed) continue;
+for (const r2 of rankKeys) {
+if (r2 === r1) continue;
+const d2all = suitDedup(g[r2]);
+for (let offset=0; offset<=d1.length-bigNeed; offset++) {
+const pick1 = d1.slice(offset, offset+bigNeed);
+const usedSuits = new Set(pick1.map(c=>c.suit));
+const d2 = d2all.filter(c=>!usedSuits.has(c.suit));
+if (d2.length >= 2) {
+const b = tryFullHouseBomb([...pick1, ...d2.slice(0,2)]);
+if (b) bombs.push(b);
+break;
+}
+}
+}
+}
+}
+// SeqGroupBomb: running pairs/triples where consecutive ranks share a common suit subset.
+for (const groupSize of [2,3]) {
+const eligibleRanks = rankKeys.filter(r => suitDedup(g[r]).length >= groupSize).sort((a,b)=>a-b);
+let run2 = [];
+const tryRun2 = (runRanks) => {
+if (runRanks.length < 2) return;
+for (let start=0; start<runRanks.length; start++) {
+let commonSuits = null;
+for (let end=start; end<runRanks.length; end++) {
+const rr = runRanks[end];
+const suitSet = new Set(suitDedup(g[rr]).map(c=>c.suit));
+commonSuits = commonSuits===null ? new Set(suitSet) : new Set([...commonSuits].filter(s=>suitSet.has(s)));
+if (commonSuits.size < groupSize) break;
+if (end - start + 1 >= 2) {
+const chosenSuits = [...commonSuits].slice(0, groupSize);
+const bombCards = [];
+for (let i=start;i<=end;i++) {
+chosenSuits.forEach(s => {
+const c = g[runRanks[i]].find(x=>x.suit===s);
+if (c) bombCards.push(c);
+});
+}
+const b = trySeqGroupBomb(bombCards, groupSize);
+if (b) bombs.push(b);
+}
+}
+}
+};
+for (let i=0;i<eligibleRanks.length;i++) {
+if (i>0 && eligibleRanks[i]===eligibleRanks[i-1]+1) run2.push(eligibleRanks[i]);
+else { tryRun2(run2); run2=[eligibleRanks[i]]; }
+}
+tryRun2(run2);
 }
 return bombs;
 }
@@ -1415,7 +1551,7 @@ const jokers = (naga?1:0) + anjings + (cards.some(c=>c.role===ROLES.Garuda)?1:0)
 return jokers*2 + (naga?1:0);
 }
 function bidVP(cards) { return cards.reduce((s,c)=>s+Math.max(0,c.baseVP),0); }
-let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, fixedTeams:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
+let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, bombRestrictNonFullHouse:true, bombRestrict5Plus:true, fixedTeams:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
 let seatTypes = [];
 
 /* ══════════ ONLINE MULTIPLAYER — PHASE 1 (Networking Foundation) ══════════ */
@@ -2338,6 +2474,31 @@ startConfig.useDuplicates = val;
 document.getElementById('dup-on-btn').classList.toggle('active-ma', val);
 document.getElementById('dup-off-btn').classList.toggle('active-ma', !val);
 }
+function toggleBombRestrict(which) {
+if (which === 'allAllowed') {
+startConfig.bombRestrictNonFullHouse = false;
+startConfig.bombRestrict5Plus = false;
+} else if (which === 'nonFullHouse') {
+startConfig.bombRestrictNonFullHouse = !startConfig.bombRestrictNonFullHouse;
+} else if (which === 'fivePlus') {
+startConfig.bombRestrict5Plus = !startConfig.bombRestrict5Plus;
+}
+// "All Allowed" and the two restriction checkboxes are mutually exclusive as a
+// group: picking either restriction clears "All Allowed"; if neither restriction
+// ends up checked, that's functionally the same as "All Allowed" so show it as
+// checked instead of leaving all three boxes empty.
+const anyRestriction = startConfig.bombRestrictNonFullHouse || startConfig.bombRestrict5Plus;
+const allAllowedOn = !anyRestriction;
+document.getElementById('bomb-nofh-btn').classList.toggle('active-ma', startConfig.bombRestrictNonFullHouse);
+document.getElementById('bomb-5plus-btn').classList.toggle('active-ma', startConfig.bombRestrict5Plus);
+document.getElementById('bomb-all-btn').classList.toggle('active-ma', allAllowedOn);
+document.getElementById('bomb-nofh-btn').innerHTML =
+(startConfig.bombRestrictNonFullHouse ? '☑' : '☐') + ' Non-Full House';
+document.getElementById('bomb-5plus-btn').innerHTML =
+(startConfig.bombRestrict5Plus ? '☑' : '☐') + ' 5+ Cards';
+document.getElementById('bomb-all-btn').innerHTML =
+(allAllowedOn ? '☑' : '☐') + ' All Allowed';
+}
 function setFixedTeams(val) {
 startConfig.fixedTeams = val;
 document.getElementById('fixedteams-on-btn').classList.toggle('active-ma', val);
@@ -2481,6 +2642,8 @@ seatNames: names,
 isHuman: types.map(t=>t==='human'),
 useMA: startConfig.useMA,
 useDuplicates: startConfig.useDuplicates,
+bombRestrictNonFullHouse: startConfig.bombRestrictNonFullHouse,
+bombRestrict5Plus: startConfig.bombRestrict5Plus,
 fixedTeams: startConfig.fixedTeams,
 scoreMode: startConfig.scoreMode,
 diff: startConfig.diff,
@@ -2674,6 +2837,7 @@ G.bombInterrupt = false; G.bombInterruptSeat = null;
 G.trickCards = []; G.trickMACards = []; G.trickMASeats = new Set(); G.trickPlayIdx = 0;
 G.playedCards  = [];
 G.gtDeclPassedTypes = {};
+G.cDeclPassedTypes = {};
 G.currentSet   = null;
 G.selected     = [];
 G.decl         = Array(G.nPlayers).fill(null);
@@ -4436,9 +4600,9 @@ let run = [sorted[0]];
 const runs = [];
 for (let i = 1; i < sorted.length; i++) {
 if (sorted[i].rank === run[run.length-1].rank + 1) run.push(sorted[i]);
-else { if (run.length >= 5) runs.push(run); run = [sorted[i]]; }
+else { if (run.length >= 4) runs.push(run); run = [sorted[i]]; }
 }
-if (run.length >= 5) runs.push(run);
+if (run.length >= 4) runs.push(run);
 for (const r of runs) r.forEach(c => protected_.add(c.id));
 }
 return protected_;
@@ -4725,6 +4889,8 @@ return Math.min(conf, 1);
 }
 function beginTrickPlay() {
 G.phase = 'trickplay';
+G.startHandSize = {};
+allSeats().forEach(s => { G.startHandSize[s] = (G.handA[s]||[]).length; });
 G.tichuWindow = false;
 G.grandTokohWindow = false;
 G.currentSet = null;
@@ -4983,9 +5149,11 @@ const hand = G.handA[seat];
 const fulfill = getWishFulfillPlay(hand, G.mulaiWished, G.currentSet);
 if (fulfill) {
 if (fulfill.forcedBomb) {
-const isThatBomb = sel.length === fulfill.cards.length && fulfill.cards.every(c => sel.some(s=>s.id===c.id));
-if (!isThatBomb) {
-glog(`Mulai wish — rank ${RANK_NAME[G.mulaiWished]||G.mulaiWished} is only reachable via a bomb here; you must play that bomb.`, 'bad');
+// The wish forbids passing here, but doesn't dictate which bomb — any legal
+// bomb satisfies it. An unrelated natural play does not, even if it happens
+// to beat the current meld.
+if (!set.isBomb) {
+glog(`Mulai wish — rank ${RANK_NAME[G.mulaiWished]||G.mulaiWished} is only reachable via a bomb here; play a bomb (any legal one) instead.`, 'bad');
 return;
 }
 } else {
@@ -5131,6 +5299,7 @@ return;
 }
 function pickAnjingTarget(candidates) {
 if (!candidates.length) return null;
+if (G.diff === 'hard') return aiChooseAnjingTarget(seat, candidates);
 const declPriorityAnjing = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
 const doableDeclared = candidates.filter(s => G.decl[s] && isDeclDoable(s));
 if (doableDeclared.length) {
@@ -6492,6 +6661,17 @@ const curr = G.currentSet;
 if (!curr || !G.mulaiWished) return false;
 const fulfill = getWishFulfillPlay(hand, G.mulaiWished, curr);
 if (!fulfill) return false;
+if (fulfill.forcedBomb) {
+// The wish forbids passing here, but doesn't dictate which bomb — any legal
+// bomb satisfies it. Play the AI's own cheapest valid bomb rather than the
+// specific wish-containing one (a simplification vs. routing through
+// aiRespond's full conservation heuristics).
+const validBombs = findAllBombs(hand).filter(b => canFollow(b, curr));
+if (!validBombs.length) return false;
+const cheapest = validBombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
+playCards(seat, cheapest.cards, cheapest);
+return true;
+}
 playCards(seat, fulfill.cards, fulfill.set);
 return true;
 }
@@ -6758,7 +6938,8 @@ const natsForStar = hand.filter(c => !c.isJoker && !c.isMajorArcana);
 const rankGroupsStar = {};
 natsForStar.forEach(c => { (rankGroupsStar[c.rank] ||= []).push(c); });
 const looseStars = natsForStar.filter(c =>
-(c.rank === 1 || c.rank === 2 || c.rank === 11) && rankGroupsStar[c.rank].length === 1
+(c.rank === 1 || c.rank === 2 || c.rank === 11) && rankGroupsStar[c.rank].length === 1 &&
+!(c.rank === 11 && diff !== 'easy' && hasLowerCard(hand, 11))
 ).sort((a,b) => a.rank - b.rank);
 if (looseStars.length) {
 const declPriorityA = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
@@ -6817,6 +6998,7 @@ const freq = {};
 nats.forEach(c => { if (!freq[c.rank]) freq[c.rank]=[]; freq[c.rank].push(c); });
 for (const sc of starCards) {
 const cnt = freq[sc.rank]?.length || 0;
+if (sc.rank === 11 && diff !== 'easy' && hasLowerCard(hand, 11)) continue;
 if (cnt >= 4) {
 const meld = freq[sc.rank].slice(0,4);
 const s = validateSet(meld); if (s) { playCards(seat,meld,s); return; }
@@ -6980,7 +7162,13 @@ if (selfRegainAnjing && anjingTarget === null) anjingTarget = anjingRecipient;
 // GT/T-declared: always play now, regardless of whether a "good" target was
 // found above — getting rid of Anjing takes priority over picking the ideal
 // recipient, since the alternative is risking a stuck, unplayable last card.
-const shouldPlay = aiHasGTT || hand.length === 1 || anjingTarget !== null || usedLastTopper || selfRegainAnjing;
+// Hard: also play it the moment an eligible teammate can go out in one play, and play it right
+// away (rather than hold a dead card) when no teammate is left who could benefit from a doable
+// declaration — it can only help someone go out.
+const oneOutEligible = diff === 'hard' && activeTeammates.some(s => anjingEligibleRecipient(s) && canGoOutInOnePlay(G.handA[s]));
+const noBeneficiary = diff === 'hard' && activeTeammates.length > 0 &&
+!activeTeammates.some(s => G.decl[s] && isDeclDoable(s) && anjingEligibleRecipient(s));
+const shouldPlay = aiHasGTT || hand.length === 1 || anjingTarget !== null || usedLastTopper || selfRegainAnjing || oneOutEligible || noBeneficiary;
 if (shouldPlay) {
 const target = anjingTarget ?? anjingRecipient ?? activeTeammates[0] ?? null;
 if (target !== null || aiHasGTT) {
@@ -7370,6 +7558,17 @@ const anjingCard=hand.find(c=>c.role===ROLES.Anjing);
 if (anjingCard){const s=validateSet([anjingCard]);if(s){playCards(seat,[anjingCard],s);return;}}
 }
 function recordGTDeclPass(seat) {
+// Cukong-family declarers (Medium+Hard): remember which kinds of set they passed on. Only counted
+// once someone is already out (before that a Cukong holds back on purpose, so a pass says
+// nothing) and only when an OPPONENT held the trick (a pass behind a teammate isn't inability).
+{
+const cd = G.decl[seat], ct = G.currentSet?.type;
+if ((cd === 'cukong' || cd === 'grandCukong') && G.diff !== 'easy' && ct &&
+G.outOrder.length > 0 && G.trickWinner !== null && !seatTeam(seat, [seat]).includes(G.trickWinner)) {
+if (!G.cDeclPassedTypes) G.cDeclPassedTypes = {};
+(G.cDeclPassedTypes[seat] = G.cDeclPassedTypes[seat] || {})[ct] = true;
+}
+}
 if (G.diff !== 'hard') return;
 const decl = G.decl[seat];
 if (decl !== 'grandTichu' && decl !== 'tichu') return;
@@ -7414,8 +7613,8 @@ for (let j = i+1; j < uniqRanks.length; j++) {
 if (uniqRanks[j] === run[run.length-1] + 1) run.push(uniqRanks[j]);
 else break;
 }
-if (run.length >= 5) {
-for (let len = 5; len <= run.length; len++) {
+if (run.length >= 3) {
+for (let len = 3; len <= run.length; len++) {
 for (let start = 0; start + len <= run.length; start++) {
 out.push({type:'Straight', len, topRank: run[start+len-1]});
 }
@@ -7509,17 +7708,141 @@ G.trickMASeats?.add(seat);
 glog(`${SEAT_NAME_HTML(seat)} activates ${match.ma.id} before bombing with ${match.ma.suit}.`,'imp');
 }
 }
+// Rough minimum number of separate set plays needed to empty a hand. A triple of 12s is
+// ONE play; three unconnected singletons are THREE. Merges 3+ consecutive single ranks into
+// a straight, consecutive pair-ranks into running pairs, and a triple+pair into a full house.
+// An estimate used for "is this opponent close to going out" — not an exact partition.
+function estimateMinSetPlays(handArr) {
+const cards = (handArr||[]).filter(c => !c.isMajorArcana);
+if (!cards.length) return 0;
+const nats = cards.filter(c => !c.isJoker);
+const loneJokers = cards.filter(c => c.isJoker && c.role !== ROLES.Garuda).length;
+const hasGaruda = cards.some(c => c.role === ROLES.Garuda);
+const byRank = {};
+nats.forEach(c => { (byRank[c.rank] = byRank[c.rank] || []).push(c); });
+const ranks = Object.keys(byRank).map(Number).sort((a,b)=>a-b);
+let plays = 0;
+ranks.forEach(r => {
+const cs = byRank[r], n = cs.length;
+if (n <= 3) plays += 1;
+else if (new Set(cs.map(c => c.suit)).size >= 4) plays += 1;
+else plays += Math.ceil(n / 3);
+});
+const runsOf = (wantCount, minLen) => {
+let merged = 0, inRun = 0;
+const flush = () => { if (inRun >= minLen) merged += inRun - 1; inRun = 0; };
+ranks.forEach((r, i) => {
+const ok = byRank[r].length === wantCount;
+if (ok && inRun > 0 && ranks[i-1] === r - 1) inRun++;
+else { flush(); inRun = ok ? 1 : 0; }
+});
+flush();
+return merged;
+};
+plays -= runsOf(1, 3);
+plays -= runsOf(2, 2);
+const triples = ranks.filter(r => byRank[r].length === 3).length;
+const looseDuos = ranks.filter(r => byRank[r].length === 2).length;
+plays -= Math.min(triples, looseDuos);
+if (hasGaruda && !nats.length) plays += 1;
+plays += loneJokers;
+return Math.max(plays, 1);
+}
+// Can this hand regain the lead later WITHOUT a bomb? True if it holds a non-bomb topper:
+// Naga, or (Hard, which can read hands) any natural meld nobody else can beat. Medium cannot
+// read other hands, so it guesses from standing lead cards (Garuda or a King).
+function hasNaturalTopper(hand, seat, diff) {
+if (hand.some(c => c.role === ROLES.Naga)) return true;
+if (diff === 'hard') {
+// Toppers must come from cards OUTSIDE any bomb — a triple carved out of a Quad costs the bomb anyway.
+const bombIds = new Set(findAllBombs(hand).flatMap(b => b.cards.map(c => c.id)));
+const free = hand.filter(c => !bombIds.has(c.id));
+return extractCandidateMelds(free).some(m => isUnbeatableByOthers(m, seat));
+}
+return hand.some(c => c.role === ROLES.Garuda || (!c.isJoker && !c.isMajorArcana && c.rank === 14));
+}
+// True if any opponent is within `maxPlays` set plays of going out. Hard reads their hands;
+// Medium can only guess from card count.
+function anyOpponentCloseToOut(seat, diff, maxPlays) {
+const myTeam = seatTeam(seat, [seat]);
+return allSeats().some(s => {
+if (myTeam.includes(s) || G.outOrder.includes(s)) return false;
+const h = G.handA[s] || [];
+const plays = diff === 'hard' ? estimateMinSetPlays(h) : Math.ceil(h.length * 0.75);
+return plays <= maxPlays;
+});
+}
+// An AI whose own GT/T has FAILED, with a live C/GC partner still in the hand, should not play
+// over anyone (opponent or partner) — that steals a finishing slot the partner needs. It may play
+// once every such partner has passed on this kind of set (or already passed this trick), or when
+// an opponent is about to go out. Medium/Hard only.
+function failedDeclarerDefersToCPartner(seat, diff, curr) {
+if (diff === 'easy') return false;
+const d = G.decl[seat];
+if (!((d === 'tichu' || d === 'grandTichu') && !isDeclDoable(seat))) return false;
+const myTeam = seatTeam(seat, [seat]);
+const partners = myTeam.filter(s => s !== seat && !G.outOrder.includes(s) &&
+(G.decl[s] === 'cukong' || G.decl[s] === 'grandCukong') && isDeclDoable(s));
+if (!partners.length) return false;
+const t = curr && curr.type;
+const partnerPassed = s => !!G.trickPassed[s] || !!(t && G.cDeclPassedTypes && G.cDeclPassedTypes[s] && G.cDeclPassedTypes[s][t]);
+if (partners.every(partnerPassed)) return false;
+if (anyOpponentCloseToOut(seat, diff, 2)) return false;
+return true;
+}
+// Can this whole hand go out in ONE play (all cards form a single legal set)? One card counts.
+function canGoOutInOnePlay(handArr) {
+const cards = (handArr||[]).filter(c => !c.isMajorArcana);
+return cards.length > 0 && !!validateSet(cards, 0);
+}
+// Who may receive an Anjing/Fool lead pass (Hard): undeclared teammates, live GT/T teammates, and
+// live C/GC teammates only once someone is out. Never a failed GT/T teammate. A failed C/GC has
+// nothing left to protect, so it counts like an undeclared teammate.
+function anjingEligibleRecipient(s) {
+if (G.outOrder.includes(s)) return false;
+const d = G.decl[s];
+if (!d) return true;
+if (d === 'tichu' || d === 'grandTichu') return isDeclDoable(s);
+return isDeclDoable(s) ? G.outOrder.length > 0 : true;
+}
+// Hard AI's choice of who receives the lead from an Anjing. Tiers: (1) eligible teammates with a
+// live declaration — they are the ones with something to gain, and an undeclared teammate going
+// out first could wreck them; (2) other eligible teammates; (3) nobody eligible — still help
+// someone go out, avoiding a Cukong who must hold back. Within a tier: a one-play hand first,
+// then highest declaration, then fewest set plays left.
+function aiChooseAnjingTarget(seat, candidates) {
+const prio = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
+const live = s => !!G.decl[s] && isDeclDoable(s);
+const plays = s => estimateMinSetPlays(G.handA[s]);
+const rank = pool => pool.slice().sort((a,b) =>
+(canGoOutInOnePlay(G.handA[b]) - canGoOutInOnePlay(G.handA[a])) ||
+((live(b)?prio(b):0) - (live(a)?prio(a):0)) ||
+(plays(a) - plays(b)))[0];
+const elig = candidates.filter(anjingEligibleRecipient);
+const beneficiaries = elig.filter(live);
+if (beneficiaries.length) return rank(beneficiaries);
+if (elig.length) return rank(elig);
+const holdBackC = s => (G.decl[s]==='cukong'||G.decl[s]==='grandCukong') && isDeclDoable(s) && G.outOrder.length === 0;
+let pool = candidates.filter(s => !holdBackC(s));
+if (!pool.length) pool = candidates;
+return rank(pool);
+}
+// Early-bomb guard (Medium/Hard): an AI with its own live GT/T keeps its bombs in reserve
+// while it still holds at least half its starting hand and can regain the lead with a
+// non-bomb topper — unless an opponent is within ~3 set plays of going out first.
+function earlyBombGuardBlocks(seat, hand, diff) {
+if (diff === 'easy') return false;
+const d = G.decl[seat];
+if (!((d === 'tichu' || d === 'grandTichu') && isDeclDoable(seat))) return false;
+const startN = (G.startHandSize && G.startHandSize[seat]) || hand.length;
+if (hand.length * 2 < startN) return false;
+if (anyOpponentCloseToOut(seat, diff, 3)) return false;
+return hasNaturalTopper(hand, seat, diff);
+}
 function aiRespond(seat) {
 const hand = G.handA[seat];
 const curr = G.currentSet;
 if (!curr) { aiLead(seat); return; }
-// Mulai wish is mandatory even when curr is a bomb — matching human validation
-// (getWishFulfillPlay/doPlay), which forces a legal wish-fulfilling bomb rather
-// than exempting bombs. Checked first, before ANY pass-trigger logic below.
-if (G.mulaiWished && curr.isBomb) {
-const bombFulfill = getWishFulfillPlay(hand, G.mulaiWished, curr);
-if (bombFulfill) { playCards(seat, bombFulfill.cards, bombFulfill.set); return; }
-}
 if (G.mulaiWished && !curr.isBomb) {
 const wishedRank = G.mulaiWished;
 const wishedNatCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === wishedRank);
@@ -7575,6 +7898,11 @@ const opponentWinning = !myTeam.includes(G.trickWinner) && G.trickWinner !== nul
 const currRank = curr.topRank || curr.rank || 0;
 const activeSeats = allSeats().filter(s => !G.outOrder.includes(s));
 const activeTeammates = myTeam.filter(s => s !== seat && !G.outOrder.includes(s));
+if (failedDeclarerDefersToCPartner(seat, diff, curr) &&
+(!G.mulaiWished || !getWishFulfillPlay(hand, G.mulaiWished, curr))) {
+glog(`${SEAT_NAME_HTML(seat)} holds back for a Cukong partner (own GT/T failed).`);
+registerPass(seat); return;
+}
 const hasDecl = !!G.decl[seat];
 const starVPPriority = !hasDecl && G.outOrder.length >= 2;
 if (starVPPriority) {
@@ -7807,7 +8135,7 @@ glog(`${SEAT_NAME_HTML(seat)} passes (no card ≤13 beats GC teammate).`);
 render(); checkTrickEnd(seat, false); return;
 }
 }
-if (rankCeiling && !hardException) {
+if (cukongCeiling || (gtSupportCeiling && !hardException)) {
 if (G.mulaiWished && !curr.isBomb) {
 const wishedCards = hand.filter(c => !c.isJoker && !c.isMajorArcana && c.rank === G.mulaiWished);
 if (wishedCards.length > 0 && canFulfillWish(hand, wishedCards, curr)) {
@@ -7836,7 +8164,8 @@ const canBeatNaturally = hand.some(c => {
 if (c.isJoker) return false;
 const s = validateSet([c], curr.rank||0);
 return s && canFollow(s, curr);
-});
+}) || extractCandidateMelds(hand).some(m =>
+canFollow({type:m.type, len:m.len, topRank:m.topRank, isBomb:false}, curr));
 if (!canBeatNaturally) {
 const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
 // Hard: reserve bombs unless a specific trigger justifies spending one now —
@@ -7869,6 +8198,10 @@ hardShouldBomb = true;
 } else {
 hardShouldBomb = currIsTopper && oppOtherToppers.length === 0 && !canRegainLeadLater;
 }
+}
+if (hardShouldBomb && earlyBombGuardBlocks(seat, hand, diff)) {
+hardShouldBomb = false;
+glog(`${SEAT_NAME_HTML(seat)} holds its bomb in reserve (declared GT/T, still early).`);
 }
 if (hardShouldBomb) {
 // Conservation: if a teammate's hand already holds a natural (non-bomb) answer to
@@ -7917,7 +8250,8 @@ playCards(seat, best.cards, best); return;
 }
 }
 } else if (diff === 'hard' && teammateWinning && !curr.isBomb &&
-(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.65)) {
+(G.totalVP[G.trickWinner]||0) >= Math.floor((G.vpGoal||1000)*0.65) &&
+!earlyBombGuardBlocks(seat, hand, diff)) {
 // Cutthroat: chase down the team's own near-goal leader if this trick is valuable enough.
 const trickValue = tpVPOfCards(curr.cards) + arrowVPOfCards(curr.cards);
 if (trickValue >= 25) {
@@ -7984,7 +8318,8 @@ const currLen  = curr.len || curr.cards?.length || 1;
 const prevRank = currRank;
 const nats = hand.filter(c => !c.isJoker);
 const px = hand.find(c => c.role === ROLES.Garuda);
-if (diff === 'hard' && curr && !curr.isBomb && hasGTTeammate && opponentWinning && currLen <= 3) {
+if (diff === 'hard' && curr && !curr.isBomb && hasGTTeammate && opponentWinning &&
+(curr.type === 'Single' || curr.type === 'Pair' || curr.type === 'Triple')) {
 const meldType = curr.type;
 const declSeat = gtTeammate;
 const declHasPassed = G.gtDeclPassedTypes[declSeat]?.[meldType] === true;
@@ -8048,9 +8383,17 @@ const starRanksFollow = [1,2,9,11];
 const freqFollow = {};
 nats.forEach(c => { if(!freqFollow[c.rank]) freqFollow[c.rank]=[]; freqFollow[c.rank].push(c); });
 let starFollowPlay = null;
+// 9s and Pages only get the Star-VP jump when no lower loose singleton could legally
+// follow instead — those should clear first.
+const playableForStar = getPlayableSingles(hand, curr, seat);
+const lowerLooseCanFollow = (r) => playableForStar.some(p => {
+const pc = p.cards[0];
+return !pc.isJoker && !pc.isMajorArcana && pc.rank < r && (freqFollow[pc.rank]||[]).length === 1;
+});
 for (const r of starRanksFollow) {
 const group = freqFollow[r];
 if (!group || !group.length) continue;
+if (diff !== 'easy' && (r === 9 || r === 11) && lowerLooseCanFollow(r)) continue;
 const s = validateSet([group[0]], currRank);
 if (!s || !canFollow(s, curr)) continue;
 // If breaking a 2+ group, ensure it's not the AI's ENTIRE hand forming a bomb
@@ -8221,7 +8564,7 @@ playCards(seat, weakestRescueBomb.cards, weakestRescueBomb); return;
 }
 if (!bestResponse && opponentWinning && curr && curr.type === 'Single' && !curr.isBomb) {
 const aiDecl = G.decl[seat];
-const aiHasGT = aiDecl === 'grandTichu' || aiDecl === 'tichu';
+const aiHasGT = (aiDecl === 'grandTichu' || aiDecl === 'tichu') && isDeclDoable(seat);
 const oppGTWinner = G.decl[G.trickWinner] === 'grandTichu' || G.decl[G.trickWinner] === 'tichu';
 const teammateGTAtRisk = hasGTTeammate && opponentWinning;
 const shouldBreak = aiHasGT || oppGTWinner || teammateGTAtRisk;
@@ -8238,10 +8581,16 @@ if (breakCandidates.length > 0) {
 const card = breakCandidates[0];
 const s = validateSet([card], currRank);
 if (s && canFollow(s, curr)) {
+const breakWouldGoOutAheadOfTeammate = hand.length === 1 &&
+myTeam.some(ts => ts !== seat && !G.outOrder.includes(ts) &&
+(G.decl[ts]==='tichu'||G.decl[ts]==='grandTichu'||G.decl[ts]==='cukong'||G.decl[ts]==='grandCukong') &&
+isDeclDoable(ts));
+if (!breakWouldGoOutAheadOfTeammate) {
 const meldSize = (freq[card.rank]||[]).length;
 const meldType = meldSize >= 4 ? 'quad' : meldSize === 3 ? 'triple' : 'pair';
 glog(`${SEAT_NAME_HTML(seat)} breaks ${meldType} to play rank ${card.rank} (GT/T at stake).`, 'imp');
 playCards(seat, [card], s); return;
+}
 }
 }
 }
@@ -8336,6 +8685,12 @@ hand.filter(c => !c.isJoker && c.role !== ROLES.Garuda)
 .forEach(c => { freq[c.rank] = (freq[c.rank] || 0) + 1; });
 return Object.entries(freq).some(([r, cnt]) => cnt >= 2 && Number(r) > currRank);
 }
+// True if the hand holds any natural card strictly below `rank` — i.e. a lower singleton
+// OR a lower group that should be played first. Used on lead decisions so 11s are not
+// played purely for Star VP while lower sets still need to clear (Medium/Hard only).
+function hasLowerCard(hand, rank) {
+return hand.some(c => !c.isJoker && !c.isMajorArcana && c.rank > 0 && c.rank < rank);
+}
 function getPlayableSingles(hand, curr, seat) {
 const diff = G.diff || 'medium';
 const currRank = curr ? (curr.topRank || curr.rank || 0) : 0;
@@ -8408,7 +8763,7 @@ break;
 // that's the clearest signal the AI is actually about to win this trick. Never
 // activate purely to justify breaking a bomb for the suit bonus alone.
 const candidate = hand.find(c => c.role === ROLES.Naga && c.suit === ma.suit);
-if (candidate) {
+if (candidate && !(!isLead && failedDeclarerDefersToCPartner(seat, diff, G.currentSet))) {
 const s = validateSet([candidate], currRankSB);
 if (s && (isLead || canFollow(s, G.currentSet))) {
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
@@ -8455,6 +8810,10 @@ break;
 case 'sage':
 if (diff === 'easy') break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
+// Never spend this to overtake a teammate's own lead — the trick already belongs
+// to the team, so boosting past them wastes the card for no gain.
+if (!isLead && G.currentSet && !opponentWinning) break;
+if (!isLead && failedDeclarerDefersToCPartner(seat, diff, G.currentSet)) break;
 {
 const playedNatRanks = (G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank);
 const maxPlayed = playedNatRanks.length ? Math.max(...playedNatRanks) : 0;
@@ -8480,6 +8839,10 @@ break;
 case 'strength':
 if (diff === 'easy') break;
 if (G.currentSet && G.currentSet.type !== 'Single') break;
+// Never spend this to overtake a teammate's own lead — the trick already belongs
+// to the team, so boosting past them wastes the card for no gain.
+if (!isLead && G.currentSet && !opponentWinning) break;
+if (!isLead && failedDeclarerDefersToCPartner(seat, diff, G.currentSet)) break;
 {
 const playedNatRanks = (G.trickCards||[]).map(tc=>tc.card).filter(c=>!c.isJoker&&!c.isMajorArcana).map(c=>c.rank);
 const maxPlayed = playedNatRanks.length ? Math.max(...playedNatRanks) : 0;
@@ -9059,6 +9422,21 @@ return SUIT_ORDER.indexOf(a.suit)-SUIT_ORDER.indexOf(b.suit);
 function describeSet(set) {
 if (!set) return '?';
 const n = set.cards?.length || 1;
+if (set.type === 'FullHouseBomb' && set.cards) {
+const nats = set.cards;
+const counts = {};
+nats.forEach(c => { counts[c.rank] = (counts[c.rank]||0) + 1; });
+const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+const bigRank = entries[0]?.[0] || '?';
+const bigCount = entries[0]?.[1] || '?';
+const pairRank = entries[1]?.[0] || '?';
+return `💣 FullHouseBomb [${bigRank}×${bigCount} + ${pairRank}×2]`;
+}
+if ((set.type === 'SeqDoublesBomb' || set.type === 'SeqTriplesBomb') && set.cards) {
+const groupSize = set.type === 'SeqDoublesBomb' ? 2 : 3;
+const ranks = [...new Set(set.cards.map(c=>c.rank))].sort((a,b)=>a-b);
+return `💣 ${set.type} [${ranks.join(',')}] ×${groupSize} each`;
+}
 if (set.isBomb) return `💣 Bomb [${set.type} ${set.topRank||set.rank}] ×${n}`;
 if (set.type === 'FullHouse' && set.cards) {
 const ROLES_PX = ROLES.Garuda;
