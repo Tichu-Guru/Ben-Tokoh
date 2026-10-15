@@ -75,13 +75,13 @@ body.net-client #net-stuck-btn{display:block;}
 .net-move-btn:disabled{opacity:0.3;cursor:default;}
 .help-fab{position:fixed;top:10px;right:10px;z-index:1200;width:34px;height:34px;border-radius:50%;background:var(--gold);color:#1a1428;border:2px solid var(--gold-rim,#c8a870);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);}
 .help-fab:active{transform:scale(0.94);}
-#table-zoom-ctrl{position:fixed;top:52px;right:10px;z-index:1200;display:none;flex-direction:column;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:4px;box-shadow:0 2px 8px rgba(0,0,0,0.28);}
+#table-zoom-ctrl{position:fixed;top:9px;right:94px;z-index:1200;display:none;flex-direction:row-reverse;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:2px 4px;box-shadow:0 2px 8px rgba(0,0,0,0.28);}
 body:has(#game-screen.active) #table-zoom-ctrl{display:flex;}
 .zoom-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
 .zoom-btn:hover:not(:disabled){border-color:var(--gold3);background:var(--gold);}
 .zoom-btn:disabled{opacity:0.35;cursor:default;}
 .zoom-btn:active:not(:disabled){transform:scale(0.94);}
-#zoom-pct{font-family:'Rajdhani',sans-serif;font-size:0.62rem;font-weight:700;color:var(--text2);text-align:center;padding:1px 0;}
+#zoom-pct{font-family:'Rajdhani',sans-serif;font-size:0.62rem;font-weight:700;color:var(--text2);text-align:center;padding:0 2px;min-width:34px;}
 #help-modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,8,20,0.72);z-index:1400;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
 #help-modal-overlay.open{display:flex;}
 .help-modal{background:var(--surface);border:2px solid var(--gold-rim,#c8a870);border-radius:12px;max-width:620px;width:100%;margin-top:24px;padding:16px;color:var(--text);}
@@ -130,7 +130,25 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v241</div>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v261</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
+<script>
+(function(){
+const VER='261';
+(async function(){
+let dl=null;
+try{ dl = window.claude && await window.claude.use('downloads'); }catch(e){ dl=null; }
+if(!dl) return;
+const b=document.getElementById('dl-game-btn'); if(!b) return;
+b.style.display='block';
+b.addEventListener('click', async function(){
+let html='';
+try{ const r=await fetch(location.href,{cache:'no-store'}); if(r.ok) html=await r.text(); }catch(e){}
+if(!html || html.length<1000) html='<!doctype html>\n'+document.documentElement.outerHTML;
+try{ await dl.save({filename:'BenTokoh_'+VER+'.html', data:html}); }catch(e){ if(e && e.code!=='declined') alert('Download not available here ('+(e&&e.code||'error')+').'); }
+});
+})();
+})();
+</script>
   <div class="start-sub">A Tarot-Inspired Trick-Shedding Game</div>
   <div class="start-divider"></div>
 
@@ -196,6 +214,7 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
     <div class="toggle-row">
       <button class="toggle-btn active-bzf" id="score-bzf-btn" onclick="setScore('bzf')">BZF VP (▲︎/★/☢︎)</button>
       <button class="toggle-btn" id="score-tichu-btn" onclick="setScore('tichu')">Tokoh Only</button>
+      <button class="toggle-btn" id="score-tonly-btn" onclick="setScore('tonly')" title="Tokoh Only scoring, plus classic climbing-game sets only: no 3–4 card straights, no sequential triples, no 4+2 or 7+ card full houses; only four-of-a-kind and 5+ card straight-flush bombs.">T Only</button>
     </div>
   </div>
 
@@ -243,12 +262,30 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
         ☑ Non-Full House
       </button>
       <button class="toggle-btn active-ma" id="bomb-5plus-btn" onclick="toggleBombRestrict('fivePlus')"
-        title="Any bomb under 5 cards (a 4-card Quad, a 4-card Straight Flush, a 4-card Sequential-Group Bomb) is not legal.">
+        title="Any bomb under 5 cards (a 4-card Quad, a 4-card Straight Flush, a 4-card Sequential-Group Bomb) is not legal. Choose T Bombs for classic bombs only (a four-of-a-kind, or a 5+ card straight flush); T Only locks this on.">
         ☑ 5+ Cards
+      </button>
+      <button class="toggle-btn" id="bomb-t-btn" onclick="toggleBombRestrict('tBombs')"
+        title="Classic bombs only: a four-of-a-kind in four different suits, or a straight flush of 5+ cards. No other bomb type is legal. Locked on in T Only mode.">
+        ☐ T Bombs
       </button>
       <button class="toggle-btn" id="bomb-all-btn" onclick="toggleBombRestrict('allAllowed')"
         title="No restrictions — every known bomb type at every legal size, including Full House Bombs and 4-card bombs.">
         ☐ All Allowed
+      </button>
+    </div>
+  </div>
+
+  <div class="start-section">
+    <div class="start-label">Straights</div>
+    <div class="toggle-row">
+      <button class="toggle-btn active-ma" id="straights-high-btn" onclick="setStraights(false)"
+        title="Straights and running sets (sequential pairs/triples, straight-flush and sequential-group bombs) are ranked by their HIGHEST card.">
+        High
+      </button>
+      <button class="toggle-btn" id="straights-low-btn" onclick="setStraights(true)"
+        title="Running sets are ranked by their LOWEST card — the lower the bottom card, the stronger the set (Ace-low and Mulai-low runs are strongest).">
+        Low
       </button>
     </div>
   </div>
@@ -560,7 +597,9 @@ const HELP_SECTIONS = [
 <p><b>Goal:</b> be the first to empty your hand ("go out"). Each round you're dealt a hand; play continues in "tricks" until someone runs out of cards.</p>
 <p><b>Playing a trick:</b> the leader plays any legal set (a single card, a pair, a run, etc). Everyone after them must either play a <i>higher</i> set of the <b>same type and size</b>, or pass. The trick is won by whoever played the highest set; they lead the next trick.</p>
 <p><b>Selecting cards:</b> tap cards in your hand to select them, then tap Play. Tap Pass if you can't or don't want to beat the current play.</p>
-<p><b>Bombs</b> (four-of-a-kind, or specific special combos) can be played out of turn to interrupt play and beat almost anything.</p>
+<p><b>Bombs</b> (four-of-a-kind or bigger, straight flushes, and other special combos) can be played out of turn to interrupt play. Only a stronger bomb beats a bomb; the Non-Full House and 5+ Cards restrictions on the start screen can limit which bombs are allowed (the T Bombs option allows only a four-of-a-kind in four different suits and 5+ card straight flushes as bombs; T Only mode locks it on).</p>
+<p><b>T Only (scoring option):</b> scores like Tokoh Only (Tokoh Points and declarations only) and limits play to classic climbing-game sets: singles, pairs, triples, runs of 2+ pairs, 3+2 full houses, and straights of 5+ cards. Bombs are locked to <i>T Bombs</i> (a four-of-a-kind in four different suits, or a 5+ card straight flush). The other toggles (Duplicates, Major Arcana, Straights, Teams) still apply.</p>
+<p><b>Straights (setup option):</b> <i>High</i> (default) ranks a straight, sequential pairs/triples, and straight-flush / sequential-group bombs by their highest card. <i>Low</i> ranks them by their <b>lowest</b> card instead — the lower the bottom card, the stronger the set (Ace-low and Mulai-low runs are strongest). Lengths must still match to follow.</p>
 <p><b>Teams:</b> at setup you can choose Dynamic (teams may form or shift during play) or Fixed Teams (partnerships are locked to seat position for the whole game). This mainly matters if Major Arcana is on — see that section for how a few cards behave differently under Fixed Teams.</p>`},
 { id:'declarations', title:'Declarations', open:false, html:`
 <p>Before playing, you can stake bonus VP on a bold claim about how the hand will go:</p>
@@ -569,31 +608,31 @@ const HELP_SECTIONS = [
 <li><b>Grand Tokoh (GT):</b> the same claim, but declared <i>before</i> seeing the rest of your hand — riskier, bigger payout.</li>
 <li><b>Cukong (C) / Grand Cukong (GC):</b> a team-support claim — you're betting your <i>teammates</i> will go out 2nd/3rd, not necessarily you.</li>
 </ul>
-<p>Succeed and you (and often your team) gain VP. Fail and you personally pay the full penalty — teammates pay a smaller shared penalty only if you were the first on your team to declare.</p>`},
+<p>Declaring is a team stake: if a Tokoh/Grand Tokoh declarer goes out first, they gain the full bonus and each teammate a smaller one; if they fail, they pay the full penalty and each teammate pays a smaller one. Every declaration scores on its own — there is no first/second-declarer split.</p>`},
 { id:'vp', title:'VP Scoring', open:false, html:`
 <p>There are five separate VP pools that add up to your score:</p>
 <ul>
-<li><b>★ Star VP:</b> yours alone, from specific high cards (Aces, Pages, etc).</li>
+<li><b>★ Star VP:</b> yours alone, paid instantly to the player who <i>plays</i> the card: Ace +10; 2, 9, Page and Anjing +5 each.</li>
 <li><b>▲ Arrow VP:</b> shared with your whole team, but only if at least one of you goes out — built from cards your team actually captures in tricks.</li>
-<li><b>☢ Radioactive VP:</b> a penalty, yours alone, from certain cards (7s, 9s, Knights) if you capture them and go out.</li>
-<li><b>Tokoh Points (TP):</b> from Kings, 10s, Queens, and the Naga/Garuda jokers — mostly individual, with a bonus pool for whoever goes out first.</li>
+<li><b>☢ Radioactive VP:</b> a penalty, yours alone, from cards you capture — 7 −5, 9 −5, Knight −10, Garuda −25 — charged only if you go out. Radioactive cards left in hands are not scored.</li>
+<li><b>Tokoh Points (TP):</b> from 4s, 10s and Queens — mostly individual, with a bonus pool for whoever goes out first. (Naga and Garuda score through Arrow and Radioactive VP, not TP.)</li>
 <li><b>Declaration VP:</b> the bonuses/penalties from Tokoh/Cukong declarations above.</li>
 </ul>
 <p>Solo players (in 3-player games) don't participate in Arrow or Radioactive VP at all — those are team-only pools.</p>`},
 { id:'jokers', title:'Jokers', open:false, html:`
 <p>Each suit contributes one special Joker:</p>
 <ul>
-<li><b>Naga:</b> the strongest card in the game. Worth +25 Tokoh Points.</li>
-<li><b>Garuda:</b> nearly as strong in a trick, but worth −25 Tokoh Points. It can also pair up with any single card as a wildcard.</li>
-<li><b>Mulai:</b> always leads the very first trick of the hand, and can "wish" for a rank that other players must play when they're able to.</li>
-<li><b>Anjing:</b> the weakest card — can only ever be led, never played in response to someone else. Playing it passes the lead to your teammate.</li>
+<li><b>Naga:</b> played alone, it beats any non-bomb set of up to 6 cards (Single, Pair, Straight, anything — sets of 7+ cards are stronger than the Naga) and can lead a trick; only a bomb (or a 7+ card set it cannot beat) stops it. When a trick is won with the Naga, the Naga and every positive-VP card in the trick (2s, 5s, 8s, 4s, 10s, Queens) are gifted to the lowest-VP player (if you are already lowest you keep everything); you capture the rest. The gifted Arrow VP (Naga +25) counts only if someone on the receiver's team goes out; gifted TP scores to the receiver personally. Worth +25 Arrow VP.</li>
+<li><b>Garuda:</b> second only to the Naga in a trick, but worth −25 Radioactive VP when captured (charged only if you go out). It can also pair with any single natural card as a wildcard.</li>
+<li><b>Mulai:</b> always leads the very first trick of the hand, and can "wish" for a rank. While a wish is active, a player may not pass if any legal play using that rank exists (any legal bomb also satisfies this); the wish never forces a specific play.</li>
+<li><b>Anjing:</b> the weakest card — can only ever be led, never played in response to someone else. Playing it passes the lead to your teammate and scores +5 Star VP.</li>
 </ul>`},
 { id:'majors', title:'Major Arcana', open:false, html:`
 <p>An optional layer that adds tarot-themed cards with one-time special effects — things like swapping cards, forming ad-hoc teams mid-game, or granting bonus VP for specific suits in a trick. If Major Arcana is off, you can ignore this section entirely.</p>
 <p>Major Arcana games add an auction phase before play, where these special cards get distributed.</p>
 <p><b>Lovers, Pan, and Hermit</b> work differently depending on your Teams setting:</p>
 <ul>
-<li><b>Dynamic Teams:</b> Lovers and Pan let the activator invite an unaffiliated player to form/join a team together (Pan also grants +25 VP to the target and auto-declares Grand Tokoh for the activator). Hermit locks in teams — remaining unaffiliated players, including the activator, become Solo — and also cancels Arrow VP for everyone that hand.</li>
+<li><b>Dynamic Teams:</b> Lovers and Pan let the activator invite an unaffiliated player to form/join a team together (Pan also grants +25 VP to the target and auto-declares Grand Tokoh for the activator). Hermit locks in teams — remaining unaffiliated players, including the activator, become Solo and score no Arrow VP that hand. Players already on a team or in a Lovers/Pan pair are unaffected.</li>
 <li><b>Fixed Teams:</b> since partnerships can't change, these cards do something else instead. Lovers lets the activator pick an existing teammate — your combined captured Arrow VP is shared privately between just the two of you that hand, rather than pooled with everyone else. Pan does the same private split, plus still auto-declares Grand Tokoh for the activator.</li>
 </ul>
 <p>If you're chosen by more than one Lovers/Pan activation in the same hand, your Arrow VP is still only ever doubled once — it doesn't stack further.</p>`}
@@ -760,10 +799,10 @@ const ROLES = { Naga:'Naga', Garuda:'Garuda', Mulai:'Mulai', Anjing:'Anjing' };
 const MA_POOL = [
 {id:'Fool',     n:0,  t:'DuringTrick', fx:'fool',
 d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5★, play any illegal singleton into this trick. Cannot win.'},
-{id:'Magus',    n:1,  t:'DuringTrick', fx:'suitbonus', suit:'Clubs', d:'At Trick End: +5▲︎ to whoever played each Clubs card in the trick.'},
-{id:'Priestess',n:2,  t:'DuringTrick', fx:'suitbonus', suit:'Hearts',   d:'At Trick End: +5▲︎ to whoever played each Hearts card in the trick.'},
-{id:'Empress',  n:3,  t:'DuringTrick', fx:'suitbonus', suit:'Diamonds',  d:'At Trick End: +5▲︎ to whoever played each Diamonds card in the trick.'},
-{id:'Emperor',  n:4,  t:'DuringTrick', fx:'suitbonus', suit:'Spades', d:'At Trick End: +5▲︎ to whoever played each Spades card in the trick.'},
+{id:'Magus',    n:1,  t:'DuringTrick', fx:'suitbonus', suit:'Clubs', d:'At Trick End: +5★ to you for each Clubs card in the trick (Jokers count).'},
+{id:'Priestess',n:2,  t:'DuringTrick', fx:'suitbonus', suit:'Hearts',   d:'At Trick End: +5★ to you for each Hearts card in the trick (Jokers count).'},
+{id:'Empress',  n:3,  t:'DuringTrick', fx:'suitbonus', suit:'Diamonds',  d:'At Trick End: +5★ to you for each Diamonds card in the trick (Jokers count).'},
+{id:'Emperor',  n:4,  t:'DuringTrick', fx:'suitbonus', suit:'Spades', d:'At Trick End: +5★ to you for each Spades card in the trick (Jokers count).'},
 {id:'Sage',     n:5,  t:'DuringTrick', fx:'sage',      d:'DuringTrick: Choose ONE rank (8, 9, or 10) — that rank gains +4 this trick. Activate before playing your card.'},
 {id:'Lovers',       n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Heterosexual Lovers]'},
 {id:'LoversGM',     n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Gay Male Lovers]'},
@@ -771,7 +810,7 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'LoversTrans',  n:6, t:'PreDeal', fx:'lovers', d:'PreDeal: Invite one player to join/form a team. Affiliation is automatic — no decline. Unaffiliated inviter + unaffiliated target forms Green Team (first) or Yellow Team (second). [Transgender Lovers]'},
 {id:'Chariot',  n:7,  t:'DuringTrick', fx:'chariot',   d:'After playing 4+ cards all rank 0–5: that set cannot be beaten by non-Bombs.'},
 {id:'Strength', n:8,  t:'DuringTrick', fx:'strength',  d:'DuringTrick: Choose ONE rank (5, 6, or 7) — that rank gains +7 this trick. Activate before playing your card.'},
-{id:'Hermit',   n:9,  t:'PreDeal',     fx:'hermit',    d:'PreDeal: All remaining unaffiliated players (including activator) become Solo. Already-formed teams are preserved. Arrow VP does not score for anyone this hand.'},
+{id:'Hermit',   n:9,  t:'PreDeal',     fx:'hermit',    d:'PreDeal: All remaining unaffiliated players (including activator) become Solo, so their Arrow VP is inert this hand. Already-formed teams and private pairs are preserved.'},
 {id:'Fortune',  n:10, t:'DuringTrick', fx:'fortune',   d:'During your trick turn: rotate all Arcana Tableaux (including Fools) one seat clockwise or counter-clockwise. Takes effect immediately.'},
 {id:'Balance',  n:11, t:'DuringTrick', fx:'balance',   d:'During your trick turn: if the current trick winner has more than 100▲︎ Total VP above yours, they transfer 100▲︎ to you. Card stays if condition not met.'},
 {id:'HangedMan',n:12, t:'DuringTrick', fx:'hangman',   d:'Skip this trick entirely. You lead the next trick regardless of who wins.'},
@@ -779,10 +818,10 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'Alchemist',n:14, t:'PreDeal',     fx:'alchemist', d:'Before Team Selection: Exchange 1–3 of your Arcana Tableau cards with cards on the Auction Table.'},
 {id:'Tower',    n:16, t:'DuringTrick', fx:'tower',     d:'Court cards (Kn/Q/K) lose 7 ranks for singletons and groups this trick.'},
 {id:'Star',     n:17, t:'DuringTrick', fx:'starma',    d:'DuringTrick: Doubles all ★ Star VP scored from cards played this trick. Only activate when holding an Ace to play immediately after.'},
-{id:'Moon',     n:18, t:'DuringTrick', fx:'suitbonus', suit:'Moon',   d:'At Trick End: +5▲︎ to whoever played each Moon card in the trick.'},
-{id:'Sun',      n:19, t:'DuringTrick', fx:'suitbonus', suit:'Sun',    d:'At Trick End: +5▲︎ to whoever played each Sun card in the trick.'},
+{id:'Moon',     n:18, t:'DuringTrick', fx:'suitbonus', suit:'Moon',   d:'At Trick End: +5★ to you for each Moon card in the trick (Jokers count).'},
+{id:'Sun',      n:19, t:'DuringTrick', fx:'suitbonus', suit:'Sun',    d:'At Trick End: +5★ to you for each Sun card in the trick (Jokers count).'},
 {id:'Emergence',n:20, t:'DuringTrick', fx:'emergence', d:'DuringTrick: Reveals all players\' hands to the activating player only.'},
-{id:'Cosmos',   n:21, t:'DuringTrick', fx:'cosmos',    d:'Trick winner scores +6▲︎ per distinct suit in the trick.'},
+{id:'Cosmos',   n:21, t:'DuringTrick', fx:'cosmos',    d:'At Trick End: +5★ to you for each distinct suit in the trick (Jokers count).'},
 {id:'Pan',      n:15, t:'PreDeal',     fx:'pan',       d:'PreDeal: Form Orange Team with any non-lead player. Target receives +25 VP. Activator auto-declares GT at 1.5× stakes (success +150 VP / failure −150 VP to whole Orange Team).'},
 ];
 let G = {};
@@ -1022,7 +1061,7 @@ if (sd) return {...sd, rank:0, topRank: sd.topRank, cards};
 }
 return null;
 }
-if (hasNaga && n === 1) return { type:'Single', rank:9999, topRank:9999, isBomb:false, cards };
+if (hasNaga && n === 1) return { type:'Single', rank:9999, topRank:9999, isBomb:false, isNaga:true, cards };
 if (hasNaga && n >= 2) return null;
 if (hasGaruda && n === 1) {
 if (prevRank >= 9999) return null;
@@ -1109,6 +1148,9 @@ if (ranks.size > 1) return null;
 const r = effectiveRank(nats[0], 'group');
 return { type, rank:r, topRank:r, isBomb:false, cards };
 }
+// v255: T Only limits sets to classic climbing-game sets.
+function tichuOnly() { return !!G.classicSets; }
+function tBombsOnly() { return !!G.tBombs; }
 function tryQuad(cards) {
 if (cards.length !== 4) return null;
 if (!bombAllowedByRestrictions('Quad', 4)) return null;
@@ -1123,6 +1165,7 @@ return { type:'Quad', rank:r, topRank:r, isBomb:true, bombTier:41, len:4, cards 
 }
 function tryPentadOrHexad(cards, n) {
 if (cards.length !== n) return null;
+if (tBombsOnly()) return null;
 if (G.nPlayers < 5) return null;
 if (cards.some(c => c.isJoker)) return null;
 const ranks = new Set(cards.map(c => effectiveRank(c, 'group')));
@@ -1137,6 +1180,7 @@ return { type, rank:r, topRank:r, isBomb:true, bombTier, len:n, cards };
 function tryNormalSameRank(cards) {
 const n = cards.length;
 if (n < 4) return null;
+if (tichuOnly() && n > 4) return null;
 if (n > 6) return null;
 const garuda = cards.find(c => c.role === ROLES.Garuda);
 const nats = cards.filter(c => c.role !== ROLES.Garuda && !c.isJoker);
@@ -1146,12 +1190,14 @@ const r = nats[0].rank;
 const suits = nats.map(c => c.suit);
 const uniqueSuits = new Set(suits).size;
 const hasDupeSuit = uniqueSuits < nats.length;
-if (!garuda && !hasDupeSuit) return null;
+// A 4-of-a-kind in 4 different suits is a Quad bomb; when the start-screen restriction blocks it, it plays as a normal Quad instead.
+if (!garuda && !hasDupeSuit && !(n === 4 && !bombAllowedByRestrictions('Quad', 4)) && !(n >= 5 && tBombsOnly())) return null; // distinct-suit sets whose bomb form is disallowed play as normal sets
 const type = n === 4 ? 'NormalQuad' : n === 5 ? 'NormalPentad' : 'NormalSextad';
 return { type, rank:r, topRank:r, isBomb:false, len:n, cards };
 }
 function tryStraightFlush(cards) {
 if (cards.length < 4) return null;
+if (tichuOnly() && cards.length < 5) return null;
 if (cards.some(c => c.isJoker)) return null;
 const nats = cards.filter(c => !c.isJoker);
 const suits = new Set(nats.map(c => c.suit));
@@ -1166,7 +1212,7 @@ const topR = ranks[ranks.length-1];
 return { type:'Bomb_SF', rank:topR, topRank:topR, isBomb:true, bombTier, len, cards };
 }
 function tryStraight(cards) {
-if (cards.length < 3) return null;
+if (cards.length < (tichuOnly() ? 5 : 3)) return null;
 if (cards.some(c => c.role===ROLES.Naga||c.role===ROLES.Anjing)) return null;
 const px   = cards.find(c => c.role === ROLES.Garuda);
 const mj   = cards.find(c => c.role === ROLES.Mulai);
@@ -1221,6 +1267,7 @@ return { type:'Straight', rank:topR, topRank:topR, isBomb:false, len:cards.lengt
 function tryFH(cards) {
 const n = cards.length;
 if (n !== 5 && n !== 6) return null;
+if (tichuOnly() && n === 6) return null;
 const bigNeed = n === 5 ? 3 : 4;
 const px   = cards.find(c => c.role === ROLES.Garuda);
 const nats = cards.filter(c => c.role !== ROLES.Garuda);
@@ -1240,11 +1287,13 @@ else return null;
 return { type:'FullHouse', rank:triple.r, topRank:triple.r, isBomb:false, len:n, cards };
 }
 function bombAllowedByRestrictions(type, len) {
+if (G.tBombs) return type === 'Quad' || (type === 'Bomb_SF' && len >= 5); // v256: T Bombs = four-of-a-kind and 5+ straight flush only
 if (G.bombRestrictNonFullHouse && type === 'FullHouseBomb') return false;
 if (G.bombRestrict5Plus && len < 5) return false;
 return true;
 }
 function tryFullHouseBomb(cards) {
+if (tBombsOnly()) return null;
 if (!bombAllowedByRestrictions('FullHouseBomb', cards.length)) return null;
 // 3+2 (5 cards, needs 5 distinct suits) or 4+2 (6 cards, needs 6 distinct suits).
 // No joker of any kind — bombs never include Garuda.
@@ -1261,6 +1310,7 @@ if (new Set(cards.map(c=>c.suit)).size !== n) return null;
 return { type:'FullHouseBomb', rank:groups[0].r, topRank:groups[0].r, isBomb:true, bombTier:n*10+2, len:n, cards };
 }
 function trySeqGroupBomb(cards, groupSize) {
+if (tBombsOnly()) return null;
 // Running groups (pairs/triples) where every rank uses the exact same set of
 // suits as every other rank — i.e. groupSize interlocked straight flushes.
 // No joker of any kind.
@@ -1288,6 +1338,7 @@ return { type, rank:topR, topRank:topR, isBomb:true, len:cards.length, groupCoun
 bombTier: cards.length*10+4, cards };
 }
 function tryHigherFH(cards) {
+if (tichuOnly()) return null;
 const n = cards.length;
 const validLengths = [7, 9, 11, 12, 14, 15, 18, 20];
 if (!validLengths.includes(n)) return null;
@@ -1375,6 +1426,7 @@ return { type:'SeqDoubles', rank:topR, topRank:topR, isBomb:false,
 len:cards.length, pairCount:sortedRanks.length, cards };
 }
 function trySeqTriples(cards) {
+if (tichuOnly()) return null;
 if (cards.length < 6 || cards.length % 3 !== 0) return null;
 const px   = cards.find(c => c.role === ROLES.Garuda);
 const nats = cards.filter(c => c.role !== ROLES.Garuda);
@@ -1413,6 +1465,19 @@ G.currentSet.rank = newRank;
 G.currentSet.topRank = newRank;
 }
 
+// ── Straights toggle (v251): in Low mode, running sets rank by their LOWEST card (lower = stronger).
+const RUN_SPAN = { Straight:1, Bomb_SF:1, SeqDoubles:2, SeqDoublesBomb:2, SeqTriples:3, SeqTriplesBomb:3 };
+function isRunSet(s) { return !!(s && RUN_SPAN[s.type]); }
+function runBottom(s) {
+const len = s.len || (s.cards && s.cards.length) || 0;
+return (s.topRank || s.rank || 0) - (len / RUN_SPAN[s.type]) + 1;
+}
+// Strength key: larger = stronger, comparable between sets of the same type/length.
+function sStr(s) {
+if (G.straightsLow && isRunSet(s)) return -runBottom(s);
+return s.topRank || s.rank || 0;
+}
+function setBeatsByRank(cand, curr) { return sStr(cand) > sStr(curr); }
 function canFollow(cand, curr) {
 if (!curr) return true;
 if (cand.isGaruda && curr.rank >= 9999) return false;
@@ -1423,6 +1488,9 @@ if (cand.cards && !cand.cards.every(c=>!c.isMajorArcana&&c.rank>=0&&c.rank<=5)) 
 }
 if (cand.isBomb && !curr.isBomb) return true;
 if (!cand.isBomb && curr.isBomb) return false;
+// Naga (v243/v244): a lone Naga beats any non-bomb set of up to 6 cards, and nothing but a bomb beats it.
+if (cand.isNaga && !curr.isBomb) return !curr.isNaga && (curr.len || (curr.cards && curr.cards.length) || 1) <= 6; // v244: melds of 7+ cards are stronger than the Naga
+if (curr.isNaga && !cand.isBomb) return false;
 if (cand.isBomb && curr.isBomb) {
 const cLen = cand.len || cand.cards?.length || 0;
 const xLen = curr.len || curr.cards?.length || 0;
@@ -1431,7 +1499,7 @@ const bombCatRank = t => ({Quad:1,Pentad:1,Hexad:1,FullHouseBomb:2,Bomb_SF:3,Seq
 const candCat = bombCatRank(cand.type);
 const currCat = bombCatRank(curr.type);
 if (candCat !== currCat) return candCat > currCat;
-return (cand.topRank||cand.rank) > (curr.topRank||curr.rank);
+return setBeatsByRank(cand, curr);
 }
 if (cand.type !== curr.type) return false;
 if (cand.type === 'HigherFH' || curr.type === 'HigherFH') {
@@ -1442,7 +1510,7 @@ return cand.rank > curr.rank;
 if (['Straight','SeqDoubles','SeqTriples','NormalQuad','NormalPentad','NormalSextad'].includes(cand.type)) {
 if ((cand.len||cand.cards?.length) !== (curr.len||curr.cards?.length)) return false;
 }
-return (cand.topRank||cand.rank) > (curr.topRank||curr.rank);
+return setBeatsByRank(cand, curr);
 }
 function findAllBombs(hand) {
 const bombs = [];
@@ -1551,7 +1619,7 @@ const jokers = (naga?1:0) + anjings + (cards.some(c=>c.role===ROLES.Garuda)?1:0)
 return jokers*2 + (naga?1:0);
 }
 function bidVP(cards) { return cards.reduce((s,c)=>s+Math.max(0,c.baseVP),0); }
-let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, bombRestrictNonFullHouse:true, bombRestrict5Plus:true, fixedTeams:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
+let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, bombRestrictNonFullHouse:true, bombRestrict5Plus:true, straightsLow:false, classicSets:false, tBombs:false, fixedTeams:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
 let seatTypes = [];
 
 /* ══════════ ONLINE MULTIPLAYER — PHASE 1 (Networking Foundation) ══════════ */
@@ -2305,7 +2373,7 @@ if (!valid.length){ netBanner('No bomb beats the current meld.', true); NET._rej
 const sorted = [...valid].sort((a,b)=>{
 if (a.len!==b.len) return a.len-b.len;
 if (a.type!==b.type) return a.type==='Bomb_SF'?1:-1;
-return (a.topRank||a.rank)-(b.topRank||b.rank);
+return sStr(a)-sStr(b);
 });
 const lbl = b => {
 const rn = RANK_NAME[b.topRank||b.rank] || String(b.topRank||b.rank);
@@ -2469,35 +2537,52 @@ document.querySelectorAll('.pcount-btn').forEach(b=>b.classList.remove('active')
 if (btn) btn.classList.add('active');
 renderSeatConfig();
 }
+function setStraights(low) {
+startConfig.straightsLow = !!low;
+document.getElementById('straights-high-btn').classList.toggle('active-ma', !low);
+document.getElementById('straights-low-btn').classList.toggle('active-ma', !!low);
+}
 function setDuplicates(val) {
 startConfig.useDuplicates = val;
 document.getElementById('dup-on-btn').classList.toggle('active-ma', val);
 document.getElementById('dup-off-btn').classList.toggle('active-ma', !val);
 }
 function toggleBombRestrict(which) {
+if (startConfig.classicSets) return; // T Only locks the bomb row to T Bombs
 if (which === 'allAllowed') {
+startConfig.tBombs = false;
+startConfig.bombRestrictNonFullHouse = false;
+startConfig.bombRestrict5Plus = false;
+} else if (which === 'tBombs') {
+startConfig.tBombs = true;
 startConfig.bombRestrictNonFullHouse = false;
 startConfig.bombRestrict5Plus = false;
 } else if (which === 'nonFullHouse') {
+startConfig.tBombs = false;
 startConfig.bombRestrictNonFullHouse = !startConfig.bombRestrictNonFullHouse;
 } else if (which === 'fivePlus') {
+startConfig.tBombs = false;
 startConfig.bombRestrict5Plus = !startConfig.bombRestrict5Plus;
 }
-// "All Allowed" and the two restriction checkboxes are mutually exclusive as a
-// group: picking either restriction clears "All Allowed"; if neither restriction
-// ends up checked, that's functionally the same as "All Allowed" so show it as
-// checked instead of leaving all three boxes empty.
+renderBombButtons();
+}
+function renderBombButtons() {
+// "All Allowed", "T Bombs" and the two restriction checkboxes are mutually exclusive as a
+// group; if nothing is checked, that is functionally "All Allowed", so show it checked.
+const locked = !!startConfig.classicSets;
 const anyRestriction = startConfig.bombRestrictNonFullHouse || startConfig.bombRestrict5Plus;
-const allAllowedOn = !anyRestriction;
-document.getElementById('bomb-nofh-btn').classList.toggle('active-ma', startConfig.bombRestrictNonFullHouse);
-document.getElementById('bomb-5plus-btn').classList.toggle('active-ma', startConfig.bombRestrict5Plus);
-document.getElementById('bomb-all-btn').classList.toggle('active-ma', allAllowedOn);
-document.getElementById('bomb-nofh-btn').innerHTML =
-(startConfig.bombRestrictNonFullHouse ? '☑' : '☐') + ' Non-Full House';
-document.getElementById('bomb-5plus-btn').innerHTML =
-(startConfig.bombRestrict5Plus ? '☑' : '☐') + ' 5+ Cards';
-document.getElementById('bomb-all-btn').innerHTML =
-(allAllowedOn ? '☑' : '☐') + ' All Allowed';
+const allAllowedOn = !anyRestriction && !startConfig.tBombs;
+const set = (id, on, label) => {
+const el = document.getElementById(id);
+el.classList.toggle('active-ma', on);
+el.innerHTML = (on ? '☑' : '☐') + ' ' + label;
+el.disabled = locked;
+el.style.opacity = locked ? '0.55' : '';
+};
+set('bomb-nofh-btn', startConfig.bombRestrictNonFullHouse, 'Non-Full House');
+set('bomb-5plus-btn', startConfig.bombRestrict5Plus, '5+ Cards');
+set('bomb-t-btn', !!startConfig.tBombs, 'T Bombs');
+set('bomb-all-btn', allAllowedOn, 'All Allowed');
 }
 function setFixedTeams(val) {
 startConfig.fixedTeams = val;
@@ -2510,9 +2595,23 @@ document.getElementById('ma-on-btn').className = 'toggle-btn' + (val?' active-ma
 document.getElementById('ma-off-btn').className = 'toggle-btn' + (!val?' active-ma':'');
 }
 function setScore(mode) {
-startConfig.scoreMode = mode;
+// 'tonly' = Tokoh Only scoring (scoreMode 'tichu') + classic-set restrictions (classicSets flag).
+const wasClassic = !!startConfig.classicSets;
+startConfig.classicSets = (mode === 'tonly');
+startConfig.scoreMode = (mode === 'tonly') ? 'tichu' : mode;
+if (mode === 'tonly' && !wasClassic) {
+// remember the bomb selection, then lock the row to T Bombs
+startConfig._savedBombs = { nofh:startConfig.bombRestrictNonFullHouse, fp:startConfig.bombRestrict5Plus, t:!!startConfig.tBombs };
+startConfig.tBombs = true; startConfig.bombRestrictNonFullHouse = false; startConfig.bombRestrict5Plus = false;
+} else if (mode !== 'tonly' && wasClassic && startConfig._savedBombs) {
+const sv = startConfig._savedBombs;
+startConfig.bombRestrictNonFullHouse = sv.nofh; startConfig.bombRestrict5Plus = sv.fp; startConfig.tBombs = sv.t;
+startConfig._savedBombs = null;
+}
+renderBombButtons();
 document.getElementById('score-bzf-btn').className = 'toggle-btn' + (mode==='bzf'?' active-bzf':'');
 document.getElementById('score-tichu-btn').className = 'toggle-btn' + (mode==='tichu'?' active-tichu':'');
+document.getElementById('score-tonly-btn').className = 'toggle-btn' + (mode==='tonly'?' active-tichu':'');
 }
 function setDiff(d) {
 startConfig.diff = d;
@@ -2644,6 +2743,9 @@ useMA: startConfig.useMA,
 useDuplicates: startConfig.useDuplicates,
 bombRestrictNonFullHouse: startConfig.bombRestrictNonFullHouse,
 bombRestrict5Plus: startConfig.bombRestrict5Plus,
+straightsLow: !!startConfig.straightsLow,
+classicSets: !!startConfig.classicSets,
+tBombs: !!startConfig.tBombs,
 fixedTeams: startConfig.fixedTeams,
 scoreMode: startConfig.scoreMode,
 diff: startConfig.diff,
@@ -2825,6 +2927,7 @@ G._team12Awarded = {};
 G.handOverPending = false;
 if (G.resolveTimer) { clearTimeout(G.resolveTimer); G.resolveTimer = null; }
 G.capturedCards= Array(G.nPlayers).fill(null).map(()=>[]);
+G.nagaGift = {};
 G.team1 = []; G.team2 = []; G.soloSeats = [];
 if (G.teamBlue?.length) {
 G.team1 = [...G.teamBlue];
@@ -5055,7 +5158,7 @@ if (s && canFollow(s, curr)) results.push({cards:fh, set:s});
 return results;
 }
 function sortBombsByStrength(bombs) {
-return [...bombs].sort((a,b) => (a.bombTier - b.bombTier) || (a.topRank - b.topRank) || (a.len - b.len));
+return [...bombs].sort((a,b) => (a.bombTier - b.bombTier) || (sStr(a) - sStr(b)) || (a.len - b.len));
 }
 // Central authority for wish fulfillment (both bomb-exempt loophole removed and the
 // don't-cannibalize-your-only-bomb rule), used by both human legality checks and AI.
@@ -5299,6 +5402,8 @@ return;
 }
 function pickAnjingTarget(candidates) {
 if (!candidates.length) return null;
+if (G._anjingFirst !== null && G._anjingFirst !== undefined && candidates.includes(G._anjingFirst)) { const t = G._anjingFirst; G._anjingFirst = null; G._anjingQual = null; return t; }
+G._anjingFirst = null; G._anjingQual = null;
 if (G.diff === 'hard') return aiChooseAnjingTarget(seat, candidates);
 const declPriorityAnjing = s => ({grandTichu:4,tichu:3,grandCukong:2,cukong:1}[G.decl[s]]||0);
 const doableDeclared = candidates.filter(s => G.decl[s] && isDeclDoable(s));
@@ -5555,7 +5660,7 @@ if (!validBombs.length) { glog('No bomb beats the current meld.','bad'); return;
 const sortedBombs = [...validBombs].sort((a,b) => {
 if (a.len !== b.len) return a.len - b.len;
 if (a.type !== b.type) return a.type === 'Bomb_SF' ? 1 : -1;
-return (a.topRank||a.rank) - (b.topRank||b.rank);
+return sStr(a) - sStr(b);
 });
 G.bombInterrupt = true;
 G.bombInterruptSeat = G.hotSeatActive;
@@ -5600,6 +5705,16 @@ render(); updateActions();
 }
 );
 }
+// Naga rule (v243): a trick won with the Naga gifts the Naga and every positive-VP card in the trick
+// (Arrow +5 cards and TP cards) to the lowest-VP player; the Naga's player captures the rest.
+// Gifted TP scores personally to the receiver; gifted Arrow only counts if the receiver's team has
+// someone out at hand's end (see the Arrow pool code). If the Naga's player is already lowest, no gift.
+function isNagaGiftCard(c) {
+if (c.role === ROLES.Naga) return true;
+if (c.isJoker) return false;
+if (calcTP([c]) > 0) return true;
+return !!c.isArrow && c.rank !== 14;
+}
 function resolveTrick(hasNaga) {
 G.trickSeq = (G.trickSeq||0) + 1;
 if (G.trickWinner === null || G.trickWinner === undefined) return;
@@ -5608,19 +5723,45 @@ const trickAll = G.trickCards.map(t=>t.card);
 if (G.scoreMode === 'bzf') {
 resolveBZFVP(winner, trickAll);
 }
-let trickReceiver = winner;
-let trickReceivers = [winner];
-if (hasNaga) {
+const nagaWin = !!(G.currentSet && G.currentSet.isNaga) && trickAll.some(c => c.role === ROLES.Naga);
+if (!nagaWin) { finishTrickResolve(winner, trickAll, null); return; }
 const minVP = Math.min(...allSeats().map(s => G.totalVP[s]||0));
-trickReceivers = allSeats().filter(s => (G.totalVP[s]||0) === minVP);
-trickReceiver = trickReceivers[0];
-const names = trickReceivers.map(s => SEAT_NAME_HTML(s)).join(', ');
-glog(`Naga: trick gifted to ${names} (lowest VP${trickReceivers.length > 1 ? ' — tied, all receive full points' : ''}). ${SEAT_NAME_HTML(winner)} keeps the lead.`, 'imp');
+const lowest = allSeats().filter(s => (G.totalVP[s]||0) === minVP);
+if (lowest.includes(winner)) {
+glog(`Naga: ${SEAT_NAME_HTML(winner)} is already lowest on VP — keeps the whole trick.`, 'imp');
+finishTrickResolve(winner, trickAll, null); return;
 }
+if (lowest.length === 1) { finishTrickResolve(winner, trickAll, lowest[0]); return; }
+const mates = lowest.filter(s => seatTeam(winner, [winner]).includes(s));
+const aiPick = () => {
+const pool = mates.length ? mates : lowest;
+return pool[Math.floor(Math.random() * pool.length)];
+};
+if (!isHuman(winner)) { finishTrickResolve(winner, trickAll, aiPick()); return; }
+const choices = lowest.map(s => ({ label: SEAT_NAME(s), value: String(s) }));
+const title = 'Naga — Gift the Naga and positive cards';
+const body = 'Several players are tied for lowest VP. Choose who receives the Naga and all positive-VP cards from this trick:';
+if (NET.mode==='host' && NET.started && NET.remoteSeats[winner]) {
+netAskPrompt(winner, 'choice', {title, body, choices}, v => finishTrickResolve(winner, trickAll, +v), () => finishTrickResolve(winner, trickAll, aiPick()));
+return;
+}
+showChoice(title, body, choices, v => finishTrickResolve(winner, trickAll, +v));
+}
+function finishTrickResolve(winner, trickAll, giftSeat) {
+if (G.phase === 'scoring') return;
+if (giftSeat !== null && giftSeat !== undefined) {
+const gifted = trickAll.filter(isNagaGiftCard);
+const kept = trickAll.filter(c => !isNagaGiftCard(c));
+G.capturedCards[winner] = (G.capturedCards[winner]||[]).concat(kept);
+G.capturedCards[giftSeat] = (G.capturedCards[giftSeat]||[]).concat(gifted);
+if (!G.nagaGift) G.nagaGift = {};
+G.nagaGift[giftSeat] = (G.nagaGift[giftSeat]||[]).concat(gifted.map(c => c.id));
+glog(`Naga: ${SEAT_NAME_HTML(giftSeat)} (lowest VP) receives the Naga and ${gifted.length - 1} other positive-VP card${gifted.length - 1 === 1 ? '' : 's'}; ${SEAT_NAME_HTML(winner)} captures the other ${kept.length}.`, 'imp');
+} else {
+G.capturedCards[winner] = (G.capturedCards[winner]||[]).concat(trickAll);
+}
+const trickReceiver = winner;
 glog(`${SEAT_NAME_HTML(winner)} wins the trick.`, 'imp');
-trickReceivers.forEach(r => {
-G.capturedCards[r] = (G.capturedCards[r]||[]).concat(trickAll);
-});
 if (G.handA[winner] && G.handA[winner].length === 0 && !G.outOrder.includes(winner)) {
 checkGoOut(winner);
 }
@@ -5635,7 +5776,7 @@ G.towerOn = false; G.chariotLock = false;
 G.balanceSeat = null;
 G.foolActive = false; G.foolSeat = null;
 G.foolPlayedThisTrick = false; G.foolPlayedCardIds = new Set();
-G.starDoubleOn = false; G.suitBonus = []; G.arrowPrivatePairs = []; G.arrowDisabled = false; G.pendingArrowExtra = {};
+G.starDoubleOn = false; G.suitBonus = []; G.arrowPrivatePairs = []; G.arrowDisabled = false;
 G.cosmosSeat = null;
 G.selected = [];
 if (G.phase === 'scoring') return;
@@ -5667,11 +5808,11 @@ function resolveBZFVP(winner, cards) {
 // Star VP scores immediately whenever a Star card is played — no Arrow requirement.
 G.trickCards.forEach(({seat, card}) => {
 if (card.isStar) {
-const sv = card.role === ROLES.Anjing ? 5 : (card.rank === 11 ? 5 : 10);
+const sv = ((!card.isJoker && card.rank === 1) ? 10 : 5) * (G.starDoubleOn ? 2 : 1);
 G.starVP[seat] = (G.starVP[seat]||0) + sv;
 G.vp[seat] = (G.vp[seat]||0) + sv;
 const label = card.role === ROLES.Anjing ? 'Anjing' : (card.rank === 1 ? 'A' : card.rank);
-glog(`${SEAT_NAME_HTML(seat)} earns ${sv}★ (rank ${label} star played).`);
+glog(`${SEAT_NAME_HTML(seat)} earns ${sv}★ (rank ${label} star played${G.starDoubleOn ? ', doubled by Star' : ''}).`);
 }
 });
 }
@@ -5925,22 +6066,24 @@ glog(`Balance: condition not met (gap ${winnerVP - holderVP}▲︎) — card ret
 }
 }
 }
-G.suitBonus.forEach(sb=>{
-const matchingPlays = (G.trickCards||[]).filter(tc => tc.card.suit === sb.suit);
-if (matchingPlays.length > 0) {
-matchingPlays.forEach(tc => {
-G.pendingArrowExtra[tc.seat] = (G.pendingArrowExtra[tc.seat]||0) + 5;
+// v257: suit Majors and Cosmos pay Star VP to the player who played the Major, judged only
+// on the cards in this trick (Jokers' suits count). Doubled if The Star is active this trick.
+if (G.scoreMode === 'bzf') {
+const dbl = G.starDoubleOn ? 2 : 1;
+const award = (seat, amt, why) => {
+const pts = amt * dbl;
+G.starVP[seat] = (G.starVP[seat]||0) + pts;
+G.vp[seat] = (G.vp[seat]||0) + pts;
+glog(`${why}: ${SEAT_NAME_HTML(seat)} earns ${pts}★${dbl > 1 ? ' (doubled by Star)' : ''}.`, 'good');
+};
+G.suitBonus.forEach(sb => {
+const n = (G.trickCards||[]).filter(tc => tc.card.suit === sb.suit).length;
+if (n > 0) award(sb.seat, n * 5, `${sb.suit} bonus (${n} card${n===1?'':'s'})`);
 });
-const breakdown = matchingPlays.map(tc => `${SEAT_NAME(tc.seat)} +5▲︎`).join(', ');
-glog(`${sb.suit} bonus (activated by ${SEAT_NAME(sb.seat)}): ${breakdown} (added to their Arrow pool at hand-end).`,'good');
+if (G.cosmosSeat !== null) {
+const suits = new Set((G.trickCards||[]).map(tc => tc.card.suit)).size;
+if (suits > 0) award(G.cosmosSeat, suits * 5, `Cosmos (${suits} suit${suits===1?'':'s'})`);
 }
-});
-if (G.cosmosSeat!==null) {
-const receiver = trickReceiver ?? winner;
-const suits = new Set(cards.map(c=>c.suit)).size;
-const bonus = suits*6;
-G.pendingArrowExtra[receiver] = (G.pendingArrowExtra[receiver]||0) + bonus;
-glog(`Cosmos: +${bonus}▲︎ (${suits} suits) → ${SEAT_NAME_HTML(receiver)} (added to their Arrow pool at hand-end).`,'good');
 }
 }
 function checkGoOut(seat) {
@@ -6291,6 +6434,23 @@ perSeatArrow[s] += (G.capturedCards[s]||[]).filter(c => !c.isJoker && c.isArrow)
 .reduce((sum, c) => sum + (c.rank === 14 ? -10 : 5), 0);
 });
 }
+// Naga gift (v243): Arrow value of cards gifted to a seat counts only if someone on that seat's
+// team has gone out by hand's end; otherwise it is forfeited. Gifted TP is unaffected (personal).
+allSeats().forEach(s => {
+const ids = (G.nagaGift && G.nagaGift[s]) || [];
+if (!ids.length) return;
+const team = seatTeam(s, [s]);
+if (team.some(t => G.outOrder.includes(t))) return;
+let lost = 0;
+(G.capturedCards[s]||[]).filter(c => ids.includes(c.id)).forEach(c => {
+if (c.role === ROLES.Naga) lost += 25;
+else if (G.scoreMode === 'bzf' && !c.isJoker && c.isArrow) lost += (c.rank === 14 ? -10 : 5);
+});
+if (lost) {
+perSeatArrow[s] -= lost;
+glog(`${SEAT_NAME_HTML(s)}: ${lost}▲ gifted by the Naga is forfeited — no teammate went out.`, 'bad');
+}
+});
 const distribute = (seats, groupLabel, remainderToHighestCapture) => {
 const total = seats.reduce((sum, s) => sum + perSeatArrow[s], 0);
 if (total === 0) return;
@@ -6317,13 +6477,6 @@ return true;
 });
 const pairedSeats = new Set();
 privatePairs.forEach(([a,b]) => { pairedSeats.add(a); pairedSeats.add(b); });
-// Suit-bonus Majors (Magus/Priestess/Empress/Emperor/Moon/Sun) and Cosmos award Arrow VP
-// per-trick rather than from captured cards — fold that in here too, doubled first for any
-// seat currently in an active Lovers/Pan pair, before the pool/private-pair split below.
-allSeats().forEach(s => {
-const extra = G.pendingArrowExtra?.[s] || 0;
-if (extra !== 0) perSeatArrow[s] += pairedSeats.has(s) ? extra * 2 : extra;
-});
 const generalSeats = allSeats().filter(s => !soloSeats.includes(s));
 if (generalSeats.length > 0) distribute(generalSeats, `Shared Arrow pool (${generalSeats.length} players)`, false);
 privatePairs.forEach(([a,b]) => distribute([a,b], `Lovers/Pan private Arrow pool (${SEAT_NAME(a)}+${SEAT_NAME(b)})`, true));
@@ -6339,31 +6492,9 @@ G.radioactiveVP[s] = (G.radioactiveVP[s]||0) - radioactivePen;
 glog(`${SEAT_NAME_HTML(s)}: −${radioactivePen}☢︎ from ${radioactiveCards.length} captured radioactive cards.`, 'bad');
 }
 });
-if (firstOut !== undefined) {
-let handRadioactiveCards = [];
-notOut.forEach(s => {
-handRadioactiveCards.push(...[...(G.handA[s]||[]), ...(G.handB[s]||[])].filter(c => !c.isJoker && c.isRadioactive));
-});
-if (handRadioactiveCards.length > 0) {
-const handRadioactivePen = handRadioactiveCards.reduce((sum, c) => sum + (c.rank === 12 ? 10 : 5), 0);
-G.vp[firstOut] = (G.vp[firstOut]||0) - handRadioactivePen;
-G.radioactiveVP[firstOut] = (G.radioactiveVP[firstOut]||0) - handRadioactivePen;
-glog(`${SEAT_NAME_HTML(firstOut)}: −${handRadioactivePen}☢︎ from ${handRadioactiveCards.length} unplayed hand radioactive cards.`, 'bad');
+// v246: Radioactive cards still in hands at hand's end are left unscored (only captured ones count).
 }
-}
-}
-// BZF cap: Star + Arrow + Radioactive combined is capped at +150 per player per
-// hand, so this VP system can't overshadow the rest of the scoring (TP,
-// Declaration VP). Only clips the positive side — a net-negative BZF total
-// (e.g. heavy Radioactive/King penalties) is left alone.
-allSeats().forEach(s => {
-const rawBzf = (G.starVP[s]||0) + (G.arrowVP[s]||0) + (G.radioactiveVP[s]||0);
-if (rawBzf > 150) {
-const excess = rawBzf - 150;
-G.vp[s] = (G.vp[s]||0) - excess;
-glog(`${SEAT_NAME_HTML(s)}: BZF VP capped at 150 (was ${rawBzf}).`, 'imp');
-}
-});
+// v247: the old +150 per-hand BZF cap on Star + Arrow + Radioactive has been removed.
 applyFailedDeclarations();
 finaliseHand();
 }
@@ -6403,7 +6534,7 @@ G.team2.includes(s)?'color:var(--pas-team2)':
 G.teamGreen?.includes(s)?'color:var(--green)':
 G.teamYellow?.includes(s)?'color:var(--pas-team4)':
 G.teamOrange?.includes(s)?'color:var(--pas-team5)':'';
-const bzfVP = G.scoreMode==='bzf' ? Math.min(150, (G.arrowVP[s]||0)+(G.starVP[s]||0)+(G.radioactiveVP[s]||0)) : 0;
+const bzfVP = G.scoreMode==='bzf' ? ((G.arrowVP[s]||0)+(G.starVP[s]||0)+(G.radioactiveVP[s]||0)) : 0;
 const teamBonusVP = G.teamBonus[s]||0;
 const tpOnly = G.tpVP[s]||0;
 const handVP = tpOnly;
@@ -6554,11 +6685,11 @@ const opponentWinning = !myTeam.includes(winner);
 if (winnerIsGTT && winnerAboutToGoOut && opponentWinning) {
 const hand = G.handA[seat];
 const bombs = findAllBombs(hand);
-const validBombs = bombs.filter(b => canFollow(b, G.currentSet));
+const validBombs = bombs.filter(b => canFollow(b, G.currentSet) && !aiKingBombBlocked(seat, b));
 if (validBombs.length > 0) {
 const weakest = validBombs.reduce((a,b) => {
 if (b.bombTier < a.bombTier) return b;
-if (b.bombTier === a.bombTier && (b.topRank||b.rank) < (a.topRank||a.rank)) return b;
+if (b.bombTier === a.bombTier && sStr(b) < sStr(a)) return b;
 return a;
 });
 glog(`${SEAT_NAME_HTML(seat)} bombs to block ${SEAT_NAME_HTML(winner)}'s GT/T! (GC/C override)`, 'imp');
@@ -6668,7 +6799,7 @@ if (fulfill.forcedBomb) {
 // aiRespond's full conservation heuristics).
 const validBombs = findAllBombs(hand).filter(b => canFollow(b, curr));
 if (!validBombs.length) return false;
-const cheapest = validBombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
+const cheapest = validBombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&sStr(b)<sStr(a)))?b:a);
 playCards(seat, cheapest.cards, cheapest);
 return true;
 }
@@ -6956,6 +7087,34 @@ if (s) { playCards(seat, [sc], s); return; }
 }
 }
 }
+// v260: a DECLARED AI holding the Anjing hands the lead to a teammate whose live declaration outranks
+// its own (GT over T). A Cukong-family AI (GC/C), once someone is out, also does so for an equal or higher
+// teammate declaration. An equal GT/T teammate is left alone (play as normal). Several qualifying
+// teammates: the lead goes to the next one in play order, and that teammate passes on as needed.
+if (hasDecl && diff !== 'easy') {
+const PR = {grandTichu:4,tichu:3,grandCukong:2,cukong:1};
+const myPr = PR[G.decl[seat]] || 0;
+const cukongMe = myPr <= 2;
+if (!cukongMe || G.outOrder.length > 0) {
+const qual = seatTeam(seat, [seat]).filter(s => s !== seat && !G.outOrder.includes(s) && G.decl[s] &&
+isDeclDoable(s) && anjingEligibleRecipient(s) &&
+(cukongMe ? PR[G.decl[s]] >= myPr : PR[G.decl[s]] > myPr));
+const anjQ = hand.find(c => c.role === ROLES.Anjing);
+if (qual.length && anjQ) {
+const aSetQ = validateSet([anjQ]);
+if (aSetQ) {
+let nextQ = null;
+for (let i = 1; i < G.nPlayers && nextQ === null; i++) {
+const cs = (seat + G.nPlayers - i) % G.nPlayers;
+if (qual.includes(cs)) nextQ = cs;
+}
+G._anjingQual = qual;
+G._anjingFirst = nextQ;
+playCards(seat, [anjQ], aSetQ); return;
+}
+}
+}
+}
 // Undeclared AI with an active GT/T-declaring teammate should lead conservatively
 // (lowest available meld, or pass the lead outright via Anjing/Fool) rather than
 // winning tricks for itself — keep tricks approachable for the teammate to claim.
@@ -6977,7 +7136,7 @@ if (fSet) { playCards(seat, [foolCardLead], fSet); return; }
 }
 if (anjingCardLead) {
 const aSet = validateSet([anjingCardLead]);
-if (aSet) { playCards(seat, [anjingCardLead], aSet); return; }
+if (aSet) { G._anjingFirst = null; playCards(seat, [anjingCardLead], aSet); return; }
 }
 // No pass tool — lead the lowest available singleton/meld instead of strongest play
 const natsLead = hand.filter(c => !c.isJoker && !c.isMajorArcana).sort((a,b)=>a.rank-b.rank);
@@ -7613,8 +7772,8 @@ for (let j = i+1; j < uniqRanks.length; j++) {
 if (uniqRanks[j] === run[run.length-1] + 1) run.push(uniqRanks[j]);
 else break;
 }
-if (run.length >= 3) {
-for (let len = 3; len <= run.length; len++) {
+if (run.length >= (tichuOnly() ? 5 : 3)) {
+for (let len = (tichuOnly() ? 5 : 3); len <= run.length; len++) {
 for (let start = 0; start + len <= run.length; start++) {
 out.push({type:'Straight', len, topRank: run[start+len-1]});
 }
@@ -7636,7 +7795,7 @@ out.push({type:'SeqDoubles', len: len*2, topRank: run[start+len-1]});
 }
 }
 }
-const tripleRanks = uniqRanks.filter(r => byRank[r].length >= 3);
+const tripleRanks = tichuOnly() ? [] : uniqRanks.filter(r => byRank[r].length >= 3);
 for (let i = 0; i < tripleRanks.length; i++) {
 let run = [tripleRanks[i]];
 for (let j = i+1; j < tripleRanks.length; j++) {
@@ -7654,7 +7813,8 @@ out.push({type:'SeqTriples', len: len*3, topRank: run[start+len-1]});
 return out;
 }
 function meldBeatableByHand(meld, otherHand) {
-return extractCandidateMelds(otherHand).some(c => c.type === meld.type && c.len === meld.len && c.topRank > meld.topRank);
+if ((otherHand||[]).some(c => c.role === ROLES.Naga) && (meld.len || 1) <= 6) return true; // v244: a Naga beats any non-bomb meld of up to 6 cards
+return extractCandidateMelds(otherHand).some(c => c.type === meld.type && c.len === meld.len && setBeatsByRank(c, meld));
 }
 function isUnbeatableByOthers(meld, holderSeat) {
 return allSeats().filter(s => s !== holderSeat && !G.outOrder.includes(s))
@@ -7839,6 +7999,82 @@ if (hand.length * 2 < startN) return false;
 if (anyOpponentCloseToOut(seat, diff, 3)) return false;
 return hasNaturalTopper(hand, seat, diff);
 }
+// Hard AI win-to-enable-Anjing: an opponent is winning the trick, this AI holds an Anjing, and an
+// eligible declaring teammate is exactly one play from going out. Take the trick with a natural
+// (non-bomb) Single/Pair/Triple that no opponent can beat — by a higher same-type meld or by any
+// bomb — so the lead returns here and the Anjing hands it to that teammate. Returns {cards,set}|null.
+function pickWinToEnableAnjing(seat, hand, curr, myTeam) {
+if (G.diff !== 'hard' || !curr || curr.isBomb) return null;
+if (!['Single','Pair','Triple'].includes(curr.type)) return null;
+if (!hand.some(c => c.role === ROLES.Anjing)) return null;
+const mcd = G.decl[seat] === 'cukong' || G.decl[seat] === 'grandCukong';
+if (mcd && G.outOrder.length === 0) return null;
+const winner = G.trickWinner;
+if (winner === null || myTeam.includes(winner)) return null;
+const target = myTeam.some(s => s !== seat && !G.outOrder.includes(s) && G.decl[s] && isDeclDoable(s) &&
+anjingEligibleRecipient(s) && canGoOutInOnePlay(G.handA[s]));
+if (!target) return null;
+const opps = allSeats().filter(s => !myTeam.includes(s) && !G.outOrder.includes(s));
+if (opps.some(s => findAllBombs(G.handA[s]||[]).length > 0)) return null;
+const len = curr.type === 'Single' ? 1 : curr.type === 'Pair' ? 2 : 3;
+const currRk = curr.topRank || curr.rank || 0;
+const nat = hand.filter(c => !c.isJoker && !c.isMajorArcana && !c.role && c.rank);
+const groups = {};
+nat.forEach(c => (groups[c.rank] = groups[c.rank] || []).push(c));
+const opts = [];
+for (const r of Object.keys(groups)) {
+const g = groups[r];
+if (g.length < len) continue;
+const cards = g.slice(0, len);
+const set = validateSet(cards, currRk);
+if (!set || set.isBomb || !canFollow(set, curr)) continue;
+const meld = { type: curr.type, len, topRank: Number(r) };
+if (opps.some(o => meldBeatableByHand(meld, G.handA[o]||[]))) continue;
+opts.push({ cards, set, extra: g.length - len, rank: Number(r) });
+}
+if (!opts.length) return null;
+opts.sort((a,b) => a.extra - b.extra || a.rank - b.rank);
+return opts[0];
+}
+// v245: pointless-bomb guard. When an opponent has just gone out with the play currently winning the
+// trick, the trick will resolve and the lead passes to the next active seat. If that seat is the
+// bomber itself, bombing only burns a bomb (the out player merely keeps the trick's cards). Applies at
+// every difficulty. Exempt: a bomb that empties the bomber's own hand, and a Mulai-forced play.
+// v259: AI never spends an all-King bomb (bombs hold no Jokers) unless it goes out with that play, or the
+// remaining hand is one legal set (so it goes out next). Applies to leads, responses and bomb-vs-bomb.
+// Hard also checks the opponents' hands: if one holds a bomb that beats it and cards would remain, hold.
+function aiKingBombBlocked(seat, b) {
+const cs = b.cards||[];
+if (!cs.length || !cs.every(c => c.rank === 14)) return false;
+const ids = new Set(cs.map(c => c.id));
+const rest = (G.handA[seat]||[]).filter(c => !ids.has(c.id));
+if (rest.length === 0) return false;
+if (!validateSet(rest)) return true;
+if (G.diff === 'hard') {
+const mine = seatTeam(seat);
+for (let s2 = 0; s2 < G.nPlayers; s2++) {
+if (mine.includes(s2) || G.outOrder.includes(s2)) continue;
+if (findAllBombs(G.handA[s2]||[]).some(ob => canFollow(ob, b))) return true;
+}
+}
+return false;
+}
+function aiBombPointlessAfterOut(seat, bomb, curr) {
+if (!curr || curr.isBomb) return false;
+const w = G.trickWinner;
+if (w === null || w === undefined || w === seat) return false;
+if (seatTeam(seat, [seat]).includes(w)) return false;
+if (!G.outOrder.includes(w) && (G.handA[w]||[]).length > 0) return false;
+if ((G.handA[seat]||[]).length === (bomb.cards||[]).length) return false;
+if (G.mulaiWished && getWishFulfillPlay(G.handA[seat]||[], G.mulaiWished, curr)) return false;
+const n = G.nPlayers;
+let next = null;
+for (let i = 1; i < n; i++) {
+const cand = (w + n - i) % n;
+if (!G.outOrder.includes(cand) && cand !== w) { next = cand; break; }
+}
+return next === seat;
+}
 function aiRespond(seat) {
 const hand = G.handA[seat];
 const curr = G.currentSet;
@@ -7902,6 +8138,13 @@ if (failedDeclarerDefersToCPartner(seat, diff, curr) &&
 (!G.mulaiWished || !getWishFulfillPlay(hand, G.mulaiWished, curr))) {
 glog(`${SEAT_NAME_HTML(seat)} holds back for a Cukong partner (own GT/T failed).`);
 registerPass(seat); return;
+}
+{
+const winPlay = pickWinToEnableAnjing(seat, hand, curr, myTeam);
+if (winPlay) {
+glog(`${SEAT_NAME_HTML(seat)} takes an unbeatable trick to pass the lead with the Anjing.`);
+playCards(seat, winPlay.cards, winPlay.set); return;
+}
 }
 const hasDecl = !!G.decl[seat];
 const starVPPriority = !hasDecl && G.outOrder.length >= 2;
@@ -8157,7 +8400,7 @@ render(); checkTrickEnd(seat, false); return;
 }
 }
 }
-const bombs = findAllBombs(hand).filter(b => canFollow(b, curr));
+const bombs = findAllBombs(hand).filter(b => canFollow(b, curr) && !aiBombPointlessAfterOut(seat, b, curr) && !aiKingBombBlocked(seat, b));
 if (bombs.length) {
 if (opponentWinning) {
 const canBeatNaturally = hand.some(c => {
@@ -8167,7 +8410,7 @@ return s && canFollow(s, curr);
 }) || extractCandidateMelds(hand).some(m =>
 canFollow({type:m.type, len:m.len, topRank:m.topRank, isBomb:false}, curr));
 if (!canBeatNaturally) {
-const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
+const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&sStr(b)<sStr(a)))?b:a);
 // Hard: reserve bombs unless a specific trigger justifies spending one now —
 // declaration block, high Arrow/TP value in this trick, or denying an otherwise-
 // unreachable monster meld the opponent would unlock by taking the lead. Absent
@@ -8255,7 +8498,7 @@ playCards(seat, best.cards, best); return;
 // Cutthroat: chase down the team's own near-goal leader if this trick is valuable enough.
 const trickValue = tpVPOfCards(curr.cards) + arrowVPOfCards(curr.cards);
 if (trickValue >= 25) {
-const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a);
+const best = bombs.reduce((a,b)=>(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&sStr(b)<sStr(a)))?b:a);
 glog(`${SEAT_NAME_HTML(seat)} bombs teammate's high-value trick (Cutthroat).`, 'imp');
 activateSuitBonusForBomb(seat, best.cards);
 playCards(seat, best.cards, best); return;
@@ -8489,7 +8732,7 @@ return results;
 const validSeq = findSeqMelds(currLen / minCopies);
 if (validSeq.length > 0) {
 // Sort by length ascending (smallest first), then by rank ascending
-validSeq.sort((a,b) => a.len - b.len || (a.set.topRank||a.set.rank) - (b.set.topRank||b.set.rank));
+validSeq.sort((a,b) => a.len - b.len || sStr(a.set) - sStr(b.set));
 // Check if any longer meld allows going out
 const goOutMeld = validSeq.find(m => hand.length === m.cards.length);
 if (goOutMeld) { playCards(seat, goOutMeld.cards, goOutMeld.set); return; }
@@ -8510,7 +8753,7 @@ else break;
 if(run.length===currLen){
 const s=validateSet(run,prevRank);
 if(s&&canFollow(s,curr)){
-if(!bestResponse||(s.topRank||s.rank)<(bestResponse.set.topRank||bestResponse.set.rank))
+if(!bestResponse||sStr(s)<sStr(bestResponse.set))
 bestResponse={cards:run,set:s};
 }
 }
@@ -8529,7 +8772,7 @@ if(run.length===currLen-1){
 const withPx=[...run,px];
 const s=validateSet(withPx,prevRank);
 if(s&&!s.isBomb&&canFollow(s,curr)){
-if(!bestResponse||(s.topRank||s.rank)<(bestResponse.set.topRank||bestResponse.set.rank))
+if(!bestResponse||sStr(s)<sStr(bestResponse.set))
 bestResponse={cards:withPx,set:s};
 }
 }
@@ -8543,13 +8786,13 @@ bestResponse={cards:withPx,set:s};
 // unless Cutthroat is active (a teammate has crossed 75% of the VP goal) and this trick's
 // own TP/Arrow value is high enough that capturing it for self-interest wins out instead.
 if (!bestResponse && opponentWinning && hasGTTeammate && curr && !curr.isBomb) {
-const rescueBombs = findAllBombs(hand).filter(b => canFollow(b, curr));
+const rescueBombs = findAllBombs(hand).filter(b => canFollow(b, curr) && !aiBombPointlessAfterOut(seat, b, curr) && !aiKingBombBlocked(seat, b));
 if (rescueBombs.length) {
 const cutthroatActive = diff === 'hard' && myTeam.some(s => s !== seat && (G.totalVP[s]||0) >= Math.floor((G.vpGoal||1000)*0.65));
 const selfInterestWins = cutthroatActive && (tpVPOfCards(curr.cards) + arrowVPOfCards(curr.cards)) >= 25;
 if (!selfInterestWins) {
 const weakestRescueBomb = rescueBombs.reduce((a,b) =>
-(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&(b.topRank||b.rank)<(a.topRank||a.rank)))?b:a
+(b.bombTier<a.bombTier||(b.bombTier===a.bombTier&&sStr(b)<sStr(a)))?b:a
 );
 if (hand.length === weakestRescueBomb.cards.length) {
 // Skip — rescuing would empty our own hand, going out ahead of the teammate we're
@@ -8747,14 +8990,13 @@ if (!G.activeSuits?.includes(ma.suit)) break;
 const currRankSB = G.currentSet ? (G.currentSet.topRank||G.currentSet.rank||0) : 0;
 const suitAlreadyInTrick = (G.trickCards||[]).some(tc => !tc.card.isJoker && tc.card.suit === ma.suit);
 if (suitAlreadyInTrick) {
-// Suit is already present — activate if self OR a teammate is currently winning.
-// Arrow VP pools to the whole team, so a teammate winning is just as good.
-if (G.trickWinner !== null && (G.trickWinner === seat || myTeam.includes(G.trickWinner))) {
+// Suit is already present — v257: the Star VP goes to whoever plays the Major, so activate.
+if (true) {
 G.bs[seat] = G.bs[seat].filter(c => c.id !== card.id);
 discardMA(card, seat);
 G.suitBonus.push({suit:ma.suit, seat});
 G.trickMASeats?.add(seat);
-glog(`${SEAT_NAME_HTML(seat)} activates ${ma.id} — ${ma.suit} already in trick, ${G.trickWinner===seat?'holding the lead':'teammate holding the lead'}.`,'imp');
+glog(`${SEAT_NAME_HTML(seat)} activates ${ma.id} — ${ma.suit} already in trick, already scoring.`,'imp');
 return;
 }
 break;
@@ -9026,7 +9268,7 @@ consumeMA();
 switch(ma.fx){
 case 'suitbonus':
 G.suitBonus.push({suit:ma.suit,seat});
-glog(`+10▲︎ if ${ma.suit} in trick.`,'good'); break;
+glog(`+5★ per ${ma.suit} card in this trick (paid at trick end).`,'good'); break;
 case 'cosmos': G.cosmosSeat=seat; break;
 case 'starma': G.starDoubleOn=true; break;
 case 'emergence':
@@ -9818,7 +10060,7 @@ break;
 }
 case 'suitbonus':
 if (inTrick && G.trickCards?.length > 0)
-hint = `Earn +10▲︎ if ${card.ma.suit} suit wins this trick`;
+hint = `Earn +5★ per ${card.ma.suit} card in this trick`;
 break;
 case 'starma':
 if (inTrick && !G.starDoubleOn && (G.trickCards||[]).some(t => t.card.isStar))
@@ -9830,7 +10072,7 @@ hint = 'Reveal all hands to you only';
 break;
 case 'cosmos':
 if (inTrick && isLead && !G.cosmosSeat)
-hint = 'Score +6▲︎ per distinct suit in the trick';
+hint = 'Score +5★ per distinct suit in the trick';
 break;
 case 'fortune':
 if (inTrick && isMyTurn)
