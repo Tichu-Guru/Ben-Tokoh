@@ -130,10 +130,10 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v261</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v263</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
 <script>
 (function(){
-const VER='261';
+const VER='263';
 (async function(){
 let dl=null;
 try{ dl = window.claude && await window.claude.use('downloads'); }catch(e){ dl=null; }
@@ -615,7 +615,7 @@ const HELP_SECTIONS = [
 <li><b>★ Star VP:</b> yours alone, paid instantly to the player who <i>plays</i> the card: Ace +10; 2, 9, Page and Anjing +5 each.</li>
 <li><b>▲ Arrow VP:</b> shared with your whole team, but only if at least one of you goes out — built from cards your team actually captures in tricks.</li>
 <li><b>☢ Radioactive VP:</b> a penalty, yours alone, from cards you capture — 7 −5, 9 −5, Knight −10, Garuda −25 — charged only if you go out. Radioactive cards left in hands are not scored.</li>
-<li><b>Tokoh Points (TP):</b> from 4s, 10s and Queens — mostly individual, with a bonus pool for whoever goes out first. (Naga and Garuda score through Arrow and Radioactive VP, not TP.)</li>
+<li><b>Tokoh Points (TP):</b> from 4s, 10s and Queens — mostly individual, with a bonus pool for whoever goes out first. (Naga and Garuda score through Arrow and Radioactive VP, not TP — except in T Only, where the Naga is +25 TP and the Garuda −25 TP, and there is no Arrow or Radioactive VP.)</li>
 <li><b>Declaration VP:</b> the bonuses/penalties from Tokoh/Cukong declarations above.</li>
 </ul>
 <p>Solo players (in 3-player games) don't participate in Arrow or Radioactive VP at all — those are team-only pools.</p>`},
@@ -1150,6 +1150,8 @@ return { type, rank:r, topRank:r, isBomb:false, cards };
 }
 // v255: T Only limits sets to classic climbing-game sets.
 function tichuOnly() { return !!G.classicSets; }
+// v263: T Only scoring (Tokoh scoring + classic sets): Naga = +25 TP, Garuda = −25 TP; no Arrow/Radioactive VP.
+function tOnlyScoring() { return !!(G && G.classicSets && G.scoreMode === 'tichu'); }
 function tBombsOnly() { return !!G.tBombs; }
 function tryQuad(cards) {
 if (cards.length !== 4) return null;
@@ -1281,7 +1283,11 @@ if (!(groups[0].cnt===bigNeed && groups[1].cnt===2)) return null;
 triple = groups[0]; pair = groups[1];
 } else {
 if (groups[0].cnt===bigNeed && groups[1].cnt===1) { triple=groups[0]; pair={r:groups[1].r,cnt:2}; }
-else if (groups[0].cnt===bigNeed-1 && groups[1].cnt===2) { triple={r:groups[0].r,cnt:bigNeed}; pair=groups[1]; }
+else if (groups[0].cnt===bigNeed-1 && groups[1].cnt===2) {
+// v262: two pairs + Garuda — the Garuda joins the HIGHER pair, so the full house ranks by the higher triple.
+const hi = groups[0].cnt===2 && groups[1].r > groups[0].r ? groups[1] : groups[0];
+const lo = hi === groups[0] ? groups[1] : groups[0];
+triple={r:hi.r,cnt:bigNeed}; pair=lo; }
 else return null;
 }
 return { type:'FullHouse', rank:triple.r, topRank:triple.r, isBomb:false, len:n, cards };
@@ -2990,6 +2996,7 @@ if (G.nPlayers === 2) {
 G.doubleHandSeat = 'both';
 }
 const deck = buildDeck(G.nPlayers);
+if (tOnlyScoring()) deck.forEach(c => { if (c.role === ROLES.Naga) c.vpStr = '+25 TP (Naga)'; else if (c.role === ROLES.Garuda) c.vpStr = '−25 TP (Garuda)'; });
 if (G.useMA) {
 if (G.handNum === 1) {
 G.maDeck    = buildMADeck();
@@ -6410,8 +6417,9 @@ const garudaCount = (G.capturedCards[s]||[]).filter(c => c.role === ROLES.Garuda
 if (garudaCount > 0) {
 const garudaPen = garudaCount * 25;
 G.vp[s] = (G.vp[s]||0) - garudaPen;
-G.radioactiveVP[s] = (G.radioactiveVP[s]||0) - garudaPen;
-glog(`${SEAT_NAME_HTML(s)}: −${garudaPen}☢︎ from ${garudaCount} captured Garuda.`, 'bad');
+if (tOnlyScoring()) { G.tpVP[s] = (G.tpVP[s]||0) - garudaPen; glog(`${SEAT_NAME_HTML(s)}: −${garudaPen} TP from ${garudaCount} captured Garuda.`, 'bad'); }
+else { G.radioactiveVP[s] = (G.radioactiveVP[s]||0) - garudaPen;
+glog(`${SEAT_NAME_HTML(s)}: −${garudaPen}☢︎ from ${garudaCount} captured Garuda.`, 'bad'); }
 }
 });
 // Arrow VP (Naga always; other Arrow-type cards in BZF mode only) is a catch-up mechanic,
@@ -6461,10 +6469,10 @@ const target = remainderToHighestCapture
 : [...seats].sort((a,b) => (G.totalVP[a]||0) - (G.totalVP[b]||0))[0];
 seats.forEach(s => {
 const amount = base + (s === target ? remainder : 0);
-G.arrowVP[s] = (G.arrowVP[s]||0) + amount;
+if (tOnlyScoring()) { G.tpVP[s] = (G.tpVP[s]||0) + amount; } else { G.arrowVP[s] = (G.arrowVP[s]||0) + amount; }
 G.vp[s] = (G.vp[s]||0) + amount;
 });
-glog(`${groupLabel}: ${base} each${remainder ? `, +${remainder} extra to ${SEAT_NAME(target)}` : ''}.`);
+glog(`${groupLabel}: ${base}${tOnlyScoring()?' TP':''} each${remainder ? `, +${remainder} extra to ${SEAT_NAME(target)}` : ''}.`);
 };
 const soloSeats = allSeats().filter(s => G.affiliations[s] === 'solo');
 const seenPairKeys = new Set();
@@ -6478,8 +6486,8 @@ return true;
 const pairedSeats = new Set();
 privatePairs.forEach(([a,b]) => { pairedSeats.add(a); pairedSeats.add(b); });
 const generalSeats = allSeats().filter(s => !soloSeats.includes(s));
-if (generalSeats.length > 0) distribute(generalSeats, `Shared Arrow pool (${generalSeats.length} players)`, false);
-privatePairs.forEach(([a,b]) => distribute([a,b], `Lovers/Pan private Arrow pool (${SEAT_NAME(a)}+${SEAT_NAME(b)})`, true));
+if (generalSeats.length > 0) distribute(generalSeats, `Shared ${tOnlyScoring()?'Naga TP':'Arrow'} pool (${generalSeats.length} players)`, false);
+privatePairs.forEach(([a,b]) => distribute([a,b], `Lovers/Pan private ${tOnlyScoring()?'Naga TP':'Arrow'} pool (${SEAT_NAME(a)}+${SEAT_NAME(b)})`, true));
 }
 if (G.scoreMode === 'bzf') {
 allSeats().forEach(s => {
@@ -7839,11 +7847,12 @@ return (handArr||[]).some(c => c.role === ROLES.Naga || c.role === ROLES.Garuda 
 || findAllBombs(handArr||[]).length > 0;
 }
 function arrowVPOfCards(cards) {
-return (cards||[]).reduce((s,c) => s + (c.role === ROLES.Naga ? 25 : (!c.isJoker && c.isArrow ? (c.rank===14?-10:5) : 0)), 0);
+return (cards||[]).reduce((s,c) => s + (c.role === ROLES.Naga ? (tOnlyScoring() ? 0 : 25) : (!c.isJoker && c.isArrow ? (c.rank===14?-10:5) : 0)), 0);
 }
 function tpVPOfCards(cards) {
 let pts = 0;
 (cards||[]).forEach(c => {
+if (tOnlyScoring()) { if (c.role === ROLES.Naga) pts += 25; else if (c.role === ROLES.Garuda) pts -= 25; }
 if (!c.isJoker) {
 if (c.rank === 4) pts += 5;
 if (c.rank === 10) pts += 10;
@@ -9546,9 +9555,9 @@ let vpDisplay, vpStripStyle, vpFaceStyle;
 if (!card.isJoker && (card.rank === 4 || card.rank === 10 || (card.rank === 13 && !card.isDuplicate))) {
 vpDisplay='TP'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-bonus);font-weight:700"';
 } else if (card.role === ROLES.Naga) {
-vpDisplay='5▲\ufe0e'; vpStripStyle=' style="color:var(--blue)"'; vpFaceStyle=' style="color:var(--vp-arrow);font-weight:700"';
+vpDisplay=tOnlyScoring()?'TP':'5▲\ufe0e'; vpStripStyle=' style="color:var(--blue)"'; vpFaceStyle=tOnlyScoring()?' style="color:var(--vp-bonus);font-weight:700"':' style="color:var(--vp-arrow);font-weight:700"';
 } else if (card.role === ROLES.Garuda) {
-vpDisplay='5☢︎'; vpStripStyle=' style="color:var(--red)"'; vpFaceStyle=' style="color:var(--vp-radioactive);font-weight:700"';
+vpDisplay=tOnlyScoring()?'TP':'5☢︎'; vpStripStyle=' style="color:var(--red)"'; vpFaceStyle=' style="color:var(--vp-radioactive);font-weight:700"';
 } else if (card.role === ROLES.Anjing) {
 vpDisplay='★'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
 } else if (!card.isJoker && card.rank === 2) {
@@ -9616,8 +9625,8 @@ inner.innerHTML = `<div class="bzf-c-strip">
 <span class="bzf-c-strip-vp"${vpStripStyle}>${vpDisplay}</span></div>
 <div class="bzf-c-face">${faceRank}<span class="bzf-c-vp-face"${vpFaceStyle}>${vpFaceDisplay}</span></div>`;
 let tipVP = card.vpStr;
-if (card.role===ROLES.Naga)               tipVP = '+25▲︎';
-else if (card.role===ROLES.Garuda)         tipVP = '-25☢︎';
+if (card.role===ROLES.Naga)               tipVP = tOnlyScoring() ? '+25 TP' : '+25▲︎';
+else if (card.role===ROLES.Garuda)         tipVP = tOnlyScoring() ? '−25 TP' : '-25☢︎';
 else if (!card.isJoker && card.rank===4)    tipVP = '5 TP';
 else if (!card.isJoker && card.rank===10)   tipVP = '10 TP';
 else if (!card.isJoker && card.rank===13 && !card.isDuplicate) tipVP = '10 TP (Queen)';
@@ -10406,8 +10415,8 @@ const rankDisp = card.isJoker
 ? roleLabel(card.role)
 : String(card.rank);
 const suitDisp = SUIT_ICON[card.suit] || '✦';
-const vpDisp = card.role === 'Naga' ? '5▲\ufe0e'
-: card.role === 'Garuda' ? '5☢︎'
+const vpDisp = card.role === 'Naga' ? (tOnlyScoring() ? 'TP' : '5▲\ufe0e')
+: card.role === 'Garuda' ? (tOnlyScoring() ? 'TP' : '5☢︎')
 : card.role === 'Anjing' ? '★'
 : (!card.isJoker && (card.rank===4||card.rank===10||(card.rank===13&&!card.isDuplicate))) ? 'TP'
 : (!card.isJoker && card.rank===2) ? '★▲︎'
