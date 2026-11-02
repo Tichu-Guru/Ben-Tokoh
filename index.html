@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!-- BenTokoh — See BenTokoh_GDD.docx for full Game Design Document -->
 <html lang="en">
 <head>
@@ -130,10 +131,10 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v263</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v276</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
 <script>
 (function(){
-const VER='263';
+const VER='276';
 (async function(){
 let dl=null;
 try{ dl = window.claude && await window.claude.use('downloads'); }catch(e){ dl=null; }
@@ -597,8 +598,8 @@ const HELP_SECTIONS = [
 <p><b>Goal:</b> be the first to empty your hand ("go out"). Each round you're dealt a hand; play continues in "tricks" until someone runs out of cards.</p>
 <p><b>Playing a trick:</b> the leader plays any legal set (a single card, a pair, a run, etc). Everyone after them must either play a <i>higher</i> set of the <b>same type and size</b>, or pass. The trick is won by whoever played the highest set; they lead the next trick.</p>
 <p><b>Selecting cards:</b> tap cards in your hand to select them, then tap Play. Tap Pass if you can't or don't want to beat the current play.</p>
-<p><b>Bombs</b> (four-of-a-kind or bigger, straight flushes, and other special combos) can be played out of turn to interrupt play. Only a stronger bomb beats a bomb; the Non-Full House and 5+ Cards restrictions on the start screen can limit which bombs are allowed (the T Bombs option allows only a four-of-a-kind in four different suits and 5+ card straight flushes as bombs; T Only mode locks it on).</p>
-<p><b>T Only (scoring option):</b> scores like Tokoh Only (Tokoh Points and declarations only) and limits play to classic climbing-game sets: singles, pairs, triples, runs of 2+ pairs, 3+2 full houses, and straights of 5+ cards. Bombs are locked to <i>T Bombs</i> (a four-of-a-kind in four different suits, or a 5+ card straight flush). The other toggles (Duplicates, Major Arcana, Straights, Teams) still apply.</p>
+<p><b>Bombs</b> (four-of-a-kind or bigger, straight flushes, and other special combos) can be played out of turn to interrupt play. Only a stronger bomb beats a bomb: more cards always beats fewer, and at the same card count the order from weakest to strongest is same-rank bomb (four, five or six of a kind), straight flush, full house bomb, then running-group bomb (sequential pairs or triples in the same suits). The Non-Full House and 5+ Cards restrictions on the start screen can limit which bombs are allowed (the T Bombs option allows only a four-of-a-kind in four different suits and 5+ card straight flushes as bombs; T Only mode locks it on).</p>
+<p><b>T Only (scoring option):</b> scores like Tokoh Only (Tokoh Points and declarations only) and limits play to classic climbing-game sets: singles, pairs, triples, runs of 2+ pairs, 3+2 full houses, and straights of 5+ cards. Bombs are locked to <i>T Bombs</i> (a four-of-a-kind in four different suits, or a 5+ card straight flush). The other toggles (Duplicates, Major Arcana, Straights, Teams) still apply. With 3 or 4 players, T Only also uses fixed teams (in 3 players the two-handed player is one team, the other two players the other). Major Arcana may be used; the team-forming Majors (Lovers, Hermit, Pan) are removed from the deck whenever teams are fixed. In T Only, ordinary Star cards score nothing, but the suit Majors and Cosmos still pay their ★ to the player who played them, and the Star Major doubles that ★ for the trick. If a team's partners go out first and second, the hand ends at once and each partner scores 200 TP with no other card points. Otherwise the hand ends when one player is left: that player's captured tricks go to the first player out and the remaining hand cards go to the opponents. Declarations are team scores: Grand Tokoh ±200, Tokoh ±100, Grand Cukong ±100, Cukong ±50, credited in full to each partner (a failed declaration costs each partner the full amount). Running totals are kept per player.</p>
 <p><b>Straights (setup option):</b> <i>High</i> (default) ranks a straight, sequential pairs/triples, and straight-flush / sequential-group bombs by their highest card. <i>Low</i> ranks them by their <b>lowest</b> card instead — the lower the bottom card, the stronger the set (Ace-low and Mulai-low runs are strongest). Lengths must still match to follow.</p>
 <p><b>Teams:</b> at setup you can choose Dynamic (teams may form or shift during play) or Fixed Teams (partnerships are locked to seat position for the whole game). This mainly matters if Major Arcana is on — see that section for how a few cards behave differently under Fixed Teams.</p>`},
 { id:'declarations', title:'Declarations', open:false, html:`
@@ -630,10 +631,10 @@ const HELP_SECTIONS = [
 { id:'majors', title:'Major Arcana', open:false, html:`
 <p>An optional layer that adds tarot-themed cards with one-time special effects — things like swapping cards, forming ad-hoc teams mid-game, or granting bonus VP for specific suits in a trick. If Major Arcana is off, you can ignore this section entirely.</p>
 <p>Major Arcana games add an auction phase before play, where these special cards get distributed.</p>
-<p><b>Lovers, Pan, and Hermit</b> work differently depending on your Teams setting:</p>
+<p><b>Lovers, Pan, and Hermit</b> are only in the Major Arcana deck with Dynamic Teams:</p>
 <ul>
 <li><b>Dynamic Teams:</b> Lovers and Pan let the activator invite an unaffiliated player to form/join a team together (Pan also grants +25 VP to the target and auto-declares Grand Tokoh for the activator). Hermit locks in teams — remaining unaffiliated players, including the activator, become Solo and score no Arrow VP that hand. Players already on a team or in a Lovers/Pan pair are unaffected.</li>
-<li><b>Fixed Teams:</b> since partnerships can't change, these cards do something else instead. Lovers lets the activator pick an existing teammate — your combined captured Arrow VP is shared privately between just the two of you that hand, rather than pooled with everyone else. Pan does the same private split, plus still auto-declares Grand Tokoh for the activator.</li>
+<li><b>Fixed Teams:</b> since partnerships can't change, all three cards are removed from the Major Arcana deck. This always applies to T Only with 3 or 4 players, which uses fixed teams.</li>
 </ul>
 <p>If you're chosen by more than one Lovers/Pan activation in the same hand, your Arrow VP is still only ever doubled once — it doesn't stack further.</p>`}
 ];
@@ -1004,7 +1005,8 @@ render();
 function buildMADeck() {
 const cards = [];
 const teamFormingFx = ['lovers','hermit','pan'];
-const excludeTeamForming = (G.nPlayers <= 3) ? teamFormingFx : [];
+// v272: Lovers, Hermit and Pan are also removed whenever teams are fixed (any variation).
+const excludeTeamForming = (G.nPlayers <= 3 || G.fixedTeams) ? teamFormingFx : [];
 const foolDef = MA_POOL.find(m=>m.id==='Fool');
 for (let i = 0; i < 9; i++) cards.push(newMACard(foolDef));
 for (const m of MA_POOL) {
@@ -1150,6 +1152,22 @@ return { type, rank:r, topRank:r, isBomb:false, cards };
 }
 // v255: T Only limits sets to classic climbing-game sets.
 function tichuOnly() { return !!G.classicSets; }
+// v266: T Only with 3 or 4 players uses fixed teams (3P: the two-handed player vs the other two), Tichu-style
+// hand ending, and team-level declaration / victory scores split evenly between partners.
+function tOnlyTeamMode() { return !!(G && G.classicSets && G.scoreMode === 'tichu' && (G.nPlayers === 3 || G.nPlayers === 4)); }
+// v268: team TOTALS only exist with 4 players (fixed teams). In 3 players the two-handed seat rotates, so the
+// teams change every hand and running scores stay per seat.
+// v276: partners are each credited full declaration / double-victory amounts, so summing partners would double count: running totals stay per seat in 3P and 4P.
+function tOnlyTeamTotals() { return false; }
+function tOnlyTeamAward(seat, total, bucket) {
+const team = seatTeam(seat, [seat]);
+const share = total; // v276: every partner is credited the FULL declaration amount
+team.forEach(t => {
+G.vp[t] = (G.vp[t]||0) + share;
+if (bucket === 'teamBonus') G.teamBonus[t] = (G.teamBonus[t]||0) + share;
+else { G.declVP[t] = (G.declVP[t]||0) + share; G[bucket][t] = (G[bucket][t]||0) + share; }
+});
+}
 // v263: T Only scoring (Tokoh scoring + classic sets): Naga = +25 TP, Garuda = −25 TP; no Arrow/Radioactive VP.
 function tOnlyScoring() { return !!(G && G.classicSets && G.scoreMode === 'tichu'); }
 function tBombsOnly() { return !!G.tBombs; }
@@ -1209,7 +1227,7 @@ if (new Set(ranks).size !== ranks.length) return null;
 for (let i=1; i<ranks.length; i++) if (ranks[i] !== ranks[i-1]+1) return null;
 const len = cards.length;
 if (!bombAllowedByRestrictions('Bomb_SF', len)) return null;
-const bombTier = len*10 + 3;
+const bombTier = len*10 + 2;
 const topR = ranks[ranks.length-1];
 return { type:'Bomb_SF', rank:topR, topRank:topR, isBomb:true, bombTier, len, cards };
 }
@@ -1313,7 +1331,7 @@ const groups = Object.entries(g).map(([r,cs])=>({r:+r,cards:cs})).sort((a,b)=>b.
 if (groups.length !== 2) return null;
 if (!(groups[0].cards.length === bigNeed && groups[1].cards.length === 2)) return null;
 if (new Set(cards.map(c=>c.suit)).size !== n) return null;
-return { type:'FullHouseBomb', rank:groups[0].r, topRank:groups[0].r, isBomb:true, bombTier:n*10+2, len:n, cards };
+return { type:'FullHouseBomb', rank:groups[0].r, topRank:groups[0].r, isBomb:true, bombTier:n*10+3, len:n, cards };
 }
 function trySeqGroupBomb(cards, groupSize) {
 if (tBombsOnly()) return null;
@@ -1501,7 +1519,8 @@ if (cand.isBomb && curr.isBomb) {
 const cLen = cand.len || cand.cards?.length || 0;
 const xLen = curr.len || curr.cards?.length || 0;
 if (cLen !== xLen) return cLen > xLen;
-const bombCatRank = t => ({Quad:1,Pentad:1,Hexad:1,FullHouseBomb:2,Bomb_SF:3,SeqDoublesBomb:4,SeqTriplesBomb:4}[t]||0);
+// v273: same card count, weakest to strongest: same-rank → Straight Flush → Full House Bomb → running-group bomb
+const bombCatRank = t => ({Quad:1,Pentad:1,Hexad:1,Bomb_SF:2,FullHouseBomb:3,SeqDoublesBomb:4,SeqTriplesBomb:4}[t]||0);
 const candCat = bombCatRank(cand.type);
 const currCat = bombCatRank(curr.type);
 if (candCat !== currCat) return candCat > currCat;
@@ -2752,7 +2771,7 @@ bombRestrict5Plus: startConfig.bombRestrict5Plus,
 straightsLow: !!startConfig.straightsLow,
 classicSets: !!startConfig.classicSets,
 tBombs: !!startConfig.tBombs,
-fixedTeams: startConfig.fixedTeams,
+fixedTeams: startConfig.fixedTeams || (startConfig.classicSets && startConfig.scoreMode === 'tichu' && (n === 3 || n === 4)),
 scoreMode: startConfig.scoreMode,
 diff: startConfig.diff,
 vpGoal: startConfig.vpGoal || 1000,
@@ -5188,6 +5207,9 @@ const naturalCandidates = findWishFulfillCards(hand, wishedCards, curr);
 const allBombs = findAllBombs(hand);
 for (const cand of naturalCandidates) {
 const usedIds = new Set(cand.cards.map(c => c.id));
+// v265: a wished King (14) is met with the fewest Kings — a King bomb is never spent when a non-bomb
+// King play can follow the current set, even if that play breaks up the King bomb.
+if (wishedRank === 14) return { cards: cand.cards, set: cand.set, forcedBomb: false };
 const candTouchesBomb = allBombs.some(b => b.cards.some(bc => usedIds.has(bc.id)));
 if (!candTouchesBomb) return { cards: cand.cards, set: cand.set, forcedBomb: false };
 const remaining = hand.filter(c => !usedIds.has(c.id));
@@ -6075,7 +6097,8 @@ glog(`Balance: condition not met (gap ${winnerVP - holderVP}▲︎) — card ret
 }
 // v257: suit Majors and Cosmos pay Star VP to the player who played the Major, judged only
 // on the cards in this trick (Jokers' suits count). Doubled if The Star is active this trick.
-if (G.scoreMode === 'bzf') {
+// v272: also scored in T Only (the only ★ source there; ordinary Star cards score nothing).
+if (G.scoreMode === 'bzf' || tOnlyScoring()) {
 const dbl = G.starDoubleOn ? 2 : 1;
 const award = (seat, amt, why) => {
 const pts = amt * dbl;
@@ -6107,7 +6130,20 @@ G.vp[seat] = (G.vp[seat]||0) + outBonus;
 }
 // Declaration bonuses/penalties (v221+): flat declarer/teammate rates, no
 // player-count scaling.
-if (G.decl[seat]==='tichu'||G.decl[seat]==='grandTichu') {
+if (tOnlyTeamMode() && G.decl[seat]) {
+const d = G.decl[seat];
+const isTT = d === 'tichu' || d === 'grandTichu';
+const total = d === 'grandTichu' ? 200 : d === 'tichu' ? 100 : d === 'grandCukong' ? 100 : 50;
+const nm = d === 'grandTichu' ? 'Grand Tokoh' : d === 'tichu' ? 'Tokoh' : d === 'grandCukong' ? 'Grand Cukong' : 'Cukong';
+if (!isTT && G._gcScoredSeats && G._gcScoredSeats.has(seat)) { /* already scored */ }
+else {
+if (!isTT) { if (!G._gcScoredSeats) G._gcScoredSeats = new Set(); G._gcScoredSeats.add(seat); }
+const ok = isTT ? pos === 1 : (pos === 2 || pos === 3);
+tOnlyTeamAward(seat, ok ? total : -total, isTT ? 'gtDeclVP' : 'gcDeclVP');
+glog(`${SEAT_NAME_HTML(seat)} ${nm} ${ok ? 'SUCCESS! +' : 'FAILED! −'}${total} for the team.`, ok ? 'good' : 'bad');
+}
+}
+if (!tOnlyTeamMode() && (G.decl[seat]==='tichu'||G.decl[seat]==='grandTichu')) {
 const isGT = G.decl[seat]==='grandTichu';
 const teamArr = G.teamBlue?.includes(seat)?G.teamBlue:G.teamRed?.includes(seat)?G.teamRed:G.teamGreen?.includes(seat)?G.teamGreen:G.teamYellow?.includes(seat)?G.teamYellow:G.teamOrange?.includes(seat)?G.teamOrange:[seat];
 const isOrangeGT = G.teamOrange?.includes(seat) && isGT;
@@ -6139,7 +6175,7 @@ glog(`${SEAT_NAME_HTML(seat)} ${isGT?'Grand Tokoh':'Tokoh'} FAILED! ${declFail} 
 }
 }
 }
-if (G.decl[seat]==='cukong'||G.decl[seat]==='grandCukong') {
+if (!tOnlyTeamMode() && (G.decl[seat]==='cukong'||G.decl[seat]==='grandCukong')) {
 const isGC = G.decl[seat]==='grandCukong';
 const teamArr = G.teamBlue?.includes(seat)?G.teamBlue:G.teamRed?.includes(seat)?G.teamRed:G.teamGreen?.includes(seat)?G.teamGreen:[seat];
 const declSuccess = isGC ? 75 : 50;
@@ -6185,6 +6221,7 @@ handOver = true;
 if (n === 2 && pos === 1) handOver = true;
 if (n === 3 && pos === 2) handOver = true;
 if (n >= 4 && pos === 3) handOver = true;
+if (tOnlyTeamMode() && n === 4 && pos === 2) { const t1 = seatTeam(G.outOrder[0], [G.outOrder[0]]); if (t1.includes(G.outOrder[1])) handOver = true; }
 if (stillIn.length <= 1) handOver = true;
 if (handOver) {
 G.handOverPending = true;
@@ -6235,6 +6272,13 @@ function applyFailedDeclarations() {
 const notOut = allSeats().filter(s => !G.outOrder.includes(s));
 notOut.forEach(s => {
 if (!G.decl[s]) return;
+if (tOnlyTeamMode()) {
+const d = G.decl[s];
+const tot = d === 'grandTichu' ? 200 : d === 'tichu' ? 100 : d === 'grandCukong' ? 100 : 50;
+tOnlyTeamAward(s, -tot, (d === 'grandTichu' || d === 'tichu') ? 'gtDeclVP' : 'gcDeclVP');
+glog(`${SEAT_NAME_HTML(s)} ${d === 'grandTichu' ? 'Grand Tokoh' : d === 'tichu' ? 'Tokoh' : d === 'grandCukong' ? 'Grand Cukong' : 'Cukong'} FAILED! −${tot} for the team.`, 'bad');
+return;
+}
 const isGT = G.decl[s] === 'grandTichu';
 const isT  = G.decl[s] === 'tichu';
 const isGC = G.decl[s] === 'grandCukong';
@@ -6285,7 +6329,7 @@ G.phase = 'scoring';
 glog('— Hand over. Scoring. —', 'imp');
 const n = G.nPlayers;
 const isLargeGame = n >= 5;
-if (n === 3 && G.outOrder.length >= 2) {
+if (!tOnlyTeamMode() && n === 3 && G.outOrder.length >= 2) {
 const [p1, p2] = G.outOrder;
 const allTeams3 = allActiveTeams().filter(t => t && t.length >= 2);
 for (const team of allTeams3) {
@@ -6296,7 +6340,7 @@ break;
 }
 }
 }
-if (n === 4 && G.outOrder.length >= 2) {
+if (!tOnlyTeamMode() && n === 4 && G.outOrder.length >= 2) {
 const [p1, p2] = G.outOrder;
 if (G.outOrder.length >= 3) {
 const p3 = G.outOrder[2];
@@ -6376,8 +6420,39 @@ glog(`${SEAT_NAME_HTML(s)}: banked hand (${banked.length} cards) scored as captu
 });
 const notOut = allSeats().filter(s => !G.outOrder.includes(s));
 const firstOut = G.outOrder[0];
+let tHandAward = null;
+let dblTeam = null; // v275: double victory — each partner is credited 200 TP
+if (tOnlyTeamMode() && firstOut !== undefined) {
+const t1 = seatTeam(firstOut, [firstOut]);
+const dbl = G.outOrder.length >= 2 && t1.length >= 2 && t1.includes(G.outOrder[1]);
+if (dbl) {
+dblTeam = t1;
+glog(`Double victory! ${t1.map(SEAT_NAME).join(' & ')} each score 200 TP — no other card points this hand.`, 'good');
+allSeats().forEach(x => { G.capturedCards[x] = []; G.handA[x] = []; G.handB[x] = []; });
+} else if (notOut.length === 1) {
+const last = notOut[0];
+const moved = G.capturedCards[last] || [];
+if (moved.length) { G.capturedCards[firstOut] = (G.capturedCards[firstOut]||[]).concat(moved); G.capturedCards[last] = []; glog(`${SEAT_NAME_HTML(last)}'s captured tricks go to ${SEAT_NAME_HTML(firstOut)}.`); }
+const lastHand = [...(G.handA[last]||[]), ...(G.handB[last]||[])];
+const handPts = calcTP(lastHand) + 25 * lastHand.filter(c => c.role === ROLES.Naga).length - 25 * lastHand.filter(c => c.role === ROLES.Garuda).length;
+const lastTeam = seatTeam(last, [last]);
+const opps = allSeats().filter(x => !lastTeam.includes(x));
+if (opps.length) tHandAward = { opps, pts: handPts, last };
+G.handA[last] = []; G.handB[last] = [];
+}
+}
 allSeats().forEach(s => { G.vp[s] = (G.starVP[s]||0) + (G.declVP[s]||0) + (G.arrowVP[s]||0) + (G.outVP[s]||0) + (G.teamBonus[s]||0); });
-if (firstOut !== undefined) {
+if (dblTeam) { dblTeam.forEach(t => { G.vp[t] = (G.vp[t]||0) + 200; G.tpVP[t] = (G.tpVP[t]||0) + 200; }); }
+if (tHandAward && tHandAward.pts !== 0) {
+const share = Math.floor(tHandAward.pts / tHandAward.opps.length);
+const rem = tHandAward.pts - share * tHandAward.opps.length;
+tHandAward.opps.forEach((o, i) => {
+const amt = share + (i === 0 ? rem : 0);
+G.vp[o] = (G.vp[o]||0) + amt; G.tpVP[o] = (G.tpVP[o]||0) + amt;
+});
+glog(`${SEAT_NAME_HTML(tHandAward.last)}'s remaining hand (${tHandAward.pts}TP) goes to the opponents.`, 'good');
+}
+if (!tOnlyTeamMode() && firstOut !== undefined) {
 const firstOutTeam = seatTeam(firstOut, [firstOut]);
 let totalPool = 0;
 notOut.forEach(s => {
@@ -6515,6 +6590,50 @@ console.error('showScoreTally error:', e);
 glog(`⚠ Score display hit an error (${e.message||e}) — check console. The hand result may be incomplete on screen but scoring itself was still applied.`, 'bad');
 }
 }
+// v267: T Only (3/4 players) tally — one row per team with the team's full declaration, bonus and TP amounts.
+function tOnlyTeamRowsHtml(posLabel) {
+const seen = new Set(); const teams = [];
+allSeats().forEach(s => { const tm = seatTeam(s,[s]); const key = tm.slice().sort().join(','); if (!seen.has(key)) { seen.add(key); teams.push(tm); } });
+const sum = (tm, f) => tm.reduce((a,t) => a + (f(t)||0), 0);
+const fmt = v => (v>=0?'+':'') + v;
+const dcell = (tm, field, kinds) => {
+const parts = [];
+tm.forEach(t => {
+const d = G.decl[t];
+if (!d || !kinds.includes(d)) return;
+const pos = G.outOrder.indexOf(t);
+const ok = (d==='grandTichu'||d==='tichu') ? pos===0 : (pos===1||pos===2);
+const nm = d==='grandTichu'?'GT':d==='tichu'?'T':d==='grandCukong'?'GC':'C';
+parts.push(nm + (ok?'✓':'✗'));
+});
+const amt = sum(tm, t => G[field][t]);
+if (!parts.length) return amt ? `<span style="font-size:0.75em;opacity:0.7">${fmt(amt)}</span>` : '—';
+return parts.join(' ') + (amt ? ` (${fmt(amt)})` : '');
+};
+return teams.map(tm => {
+const hand = sum(tm, t => G.vp[t]);
+const tp = sum(tm, t => G.tpVP[t]);
+const tb = sum(tm, t => G.teamBonus[t]);
+const gt = sum(tm, t => G.gtDeclVP[t]), gc = sum(tm, t => G.gcDeclVP[t]);
+const total = sum(tm, t => G.totalVP[t]);
+const col = v => v>0?'color:var(--green)':v<0?'color:var(--red)':'color:var(--text2)';
+const teamColor = G.team1.includes(tm[0])?'color:var(--pas-team1)':'color:var(--pas-team2)';
+return `<tr style="border-bottom:1px solid var(--border);">
+<td style="padding:6px;font-weight:800;${teamColor}">${tm.map(SEAT_NAME).join(' & ')}</td>
+<td style="padding:6px;text-align:center;color:var(--text2)">${tm.map(posLabel).join(' / ')}</td>
+<td style="padding:6px;text-align:right;color:var(--text2)">—</td>
+<td style="padding:6px;text-align:center;${col(gt)}">${dcell(tm,'gtDeclVP',['tichu','grandTichu'])}</td>
+<td style="padding:6px;text-align:center;${col(gc)}">${dcell(tm,'gcDeclVP',['cukong','grandCukong'])}</td>
+<td style="padding:6px;text-align:right;color:var(--green)">${tb?'+'+tb:'—'}</td>
+<td style="padding:6px;text-align:right;color:var(--vp-bonus)">${fmt(tp)}</td>
+<td style="padding:6px;text-align:right;color:var(--text2)">—</td>
+<td style="padding:6px;text-align:right;color:var(--text2)">—</td>
+<td style="padding:6px;text-align:right;color:var(--text2)">—</td>
+<td style="padding:6px;text-align:right;font-weight:700;color:var(--text)">${fmt(hand)}</td>
+<td style="padding:6px;text-align:right;font-weight:900;color:var(--text)">${G.nPlayers === 4 ? total : tm.map(t => SEAT_NAME(t) + ': ' + (G.totalVP[t]||0)).join('<br>')}</td>
+</tr>`;
+}).join('');
+}
 function _showScoreTallyInner() {
 const posLabel = p => {
 const i = G.outOrder.indexOf(p);
@@ -6543,6 +6662,7 @@ G.teamGreen?.includes(s)?'color:var(--green)':
 G.teamYellow?.includes(s)?'color:var(--pas-team4)':
 G.teamOrange?.includes(s)?'color:var(--pas-team5)':'';
 const bzfVP = G.scoreMode==='bzf' ? ((G.arrowVP[s]||0)+(G.starVP[s]||0)+(G.radioactiveVP[s]||0)) : 0;
+const tOnlyStarVP = tOnlyScoring() ? (G.starVP[s]||0) : 0;
 const teamBonusVP = G.teamBonus[s]||0;
 const tpOnly = G.tpVP[s]||0;
 const handVP = tpOnly;
@@ -6577,7 +6697,7 @@ return `<tr style="border-bottom:1px solid var(--border);">
 <td style="padding:6px;text-align:center;${gcColor}">${gcLabel !== '—' ? gcLabel+(gcBonus!==0?' ('+(gcBonus>0?'+':'')+gcBonus+')':'') : gcBonus!==0?'<span style="font-size:0.75em;opacity:0.7">'+(gcBonus>0?'+':'')+gcBonus+'</span>':'—'}</td>
 <td style="padding:6px;text-align:right;color:var(--green)">${G.teamBonus[s]?'+'+G.teamBonus[s]:'—'}</td>
 <td style="padding:6px;text-align:right;color:var(--vp-bonus)">${handVP>=0?'+':''}${handVP}</td>
-<td style="padding:6px;text-align:right;color:var(--vp-star);${strikeStyle}">${G.scoreMode==='bzf'?((G.starVP[s]||0)>=0?'+':'')+(G.starVP[s]||0):'—'}</td>
+<td style="padding:6px;text-align:right;color:var(--vp-star);${strikeStyle}">${(G.scoreMode==='bzf'||tOnlyScoring())?((G.starVP[s]||0)>=0?'+':'')+(G.starVP[s]||0):'—'}</td>
 <td style="padding:6px;text-align:right;color:var(--vp-arrow);${strikeStyle}">${G.scoreMode==='bzf'?((G.arrowVP[s]||0)>=0?'+':'')+(G.arrowVP[s]||0):'—'}</td>
 <td style="padding:6px;text-align:right;color:var(--vp-radioactive);${strikeStyle}">${G.scoreMode==='bzf'?((G.radioactiveVP[s]||0)>=0?'+':'')+(G.radioactiveVP[s]||0):'—'}</td>
 <td style="padding:6px;text-align:right;font-weight:700;color:var(--text)">${(()=>{
@@ -6587,7 +6707,7 @@ const declB = G.declVP[s]||0;
 const teamB = G.teamBonus[s]||0;
 const tp = G.tpVP[s]||0;
 const bzfB = bzf||0;
-const hv = outB + declB + teamB + tp + bzfB;
+const hv = outB + declB + teamB + tp + bzfB + tOnlyStarVP;
 return (hv>=0?'+':'')+hv;
 })()}</td>
 <td style="padding:6px;text-align:right;font-weight:900;color:var(--text)">${totalVP || 0}</td>
@@ -6596,7 +6716,9 @@ return (hv>=0?'+':'')+hv;
 document.getElementById('score-tally-body').innerHTML = rows;
 const modal = document.getElementById('score-tally-modal');
 modal.style.display = 'flex';
-const gameWinner = allSeats().find(s => G.totalVP[s] >= (G.vpGoal||1000));
+const gameWinner = tOnlyTeamTotals()
+? allSeats().find(s => seatTeam(s,[s]).reduce((a,t)=>a+(G.totalVP[t]||0),0) >= (G.vpGoal||1000))
+: allSeats().find(s => G.totalVP[s] >= (G.vpGoal||1000));
 const btn = document.getElementById('score-tally-next');
 btn.textContent = gameWinner !== undefined ? 'See Final Results' : 'Next Hand';
 btn.onclick = () => {
@@ -7002,12 +7124,48 @@ return G.outOrder.length >= 1 && G.outOrder.length < 3;
 }
 return false;
 }
+// v264: when a rank holds 4+ cards that form a NON-bomb same-rank set (Normal Quad/Pentad/Sextad), the AI
+// leads that whole set rather than a pair/triple cut from it.
+function bigSameRankLead(g, dflt) {
+for (let n = Math.min(g.length, 6); n >= 4; n--) {
+const ns = validateSet(g.slice(0, n));
+if (ns && !ns.isBomb && /^Normal(Quad|Pentad|Sextad)$/.test(ns.type)) return g.slice(0, n);
+}
+return g.slice(0, dflt);
+}
 function aiLead(seat) {
 const hand = G.handA[seat];
 const mj = hand.find(c => c.role === ROLES.Mulai);
 const diff = G.diff || 'medium';
 const hasCukongDecl = G.decl[seat] === 'cukong' || G.decl[seat] === 'grandCukong';
 const hasDecl = !!G.decl[seat];
+// v270: Anjing hand-off comes FIRST, on every difficulty, before any other lead logic. With the Anjing and the
+// lead, pass to a teammate whose live declaration outranks ours (an undeclared AI counts as lowest; GC/C only
+// after someone is out and for equal-or-higher). Several qualifying teammates: next one in play order.
+{
+const anjH = hand.find(c => c.role === ROLES.Anjing);
+if (anjH) {
+const PR0 = {grandTichu:4,tichu:3,grandCukong:2,cukong:1};
+const myPr0 = hasDecl ? (PR0[G.decl[seat]] || 0) : 0;
+const cukongMe0 = myPr0 > 0 && myPr0 <= 2;
+if (!cukongMe0 || G.outOrder.length > 0) {
+const qual0 = seatTeam(seat, [seat]).filter(s => s !== seat && !G.outOrder.includes(s) && G.decl[s] &&
+isDeclDoable(s) && anjingEligibleRecipient(s) &&
+(cukongMe0 ? PR0[G.decl[s]] >= myPr0 : PR0[G.decl[s]] > myPr0));
+const aSet0 = qual0.length ? validateSet([anjH]) : null;
+if (aSet0) {
+let next0 = null;
+for (let i = 1; i < G.nPlayers && next0 === null; i++) {
+const cs = (seat + G.nPlayers - i) % G.nPlayers;
+if (qual0.includes(cs)) next0 = cs;
+}
+G._anjingQual = qual0;
+G._anjingFirst = next0;
+playCards(seat, [anjH], aSet0); return;
+}
+}
+}
+}
 if (mj) {
 const nats = hand.filter(c => !c.isJoker);
 let bestNonMJStraight = null;
@@ -7198,7 +7356,7 @@ const freq = {};
 nats.forEach(c => { if (!freq[c.rank]) freq[c.rank]=[]; freq[c.rank].push(c); });
 const singletons = nats.filter(c => freq[c.rank].length === 1).sort((a,b) => a.rank-b.rank);
 const pairs = Object.values(freq).filter(g => g.length >= 2)
-.map(g => g.slice(0,2)).sort((a,b) => a[0].rank - b[0].rank);
+.map(g => bigSameRankLead(g,2)).sort((a,b) => a[0].rank - b[0].rank);
 // Prefer a run of 2+ consecutive pair ranks (running pairs) over just the
 // single lowest pair — was previously ignored entirely in this 2-player
 // endgame path, unlike the main candidate logic elsewhere in this function.
@@ -7433,10 +7591,10 @@ if (aiBombed) {
 const freq0 = {};
 nats.forEach(c => { if (!freq0[c.rank]) freq0[c.rank]=[]; freq0[c.rank].push(c); });
 const pairs0 = Object.values(freq0).filter(g => g.length >= 2)
-.map(g => g.slice(0,2)).sort((a,b) => a[0].rank - b[0].rank);
+.map(g => bigSameRankLead(g,2)).sort((a,b) => a[0].rank - b[0].rank);
 if (pairs0.length > 0) { const s=validateSet(pairs0[0]); if(s&&!s.isBomb){playCards(seat,pairs0[0],s);return;} }
 const triples0 = Object.values(freq0).filter(g => g.length >= 3)
-.map(g => g.slice(0,3)).sort((a,b) => a[0].rank - b[0].rank);
+.map(g => bigSameRankLead(g,3)).sort((a,b) => a[0].rank - b[0].rank);
 if (triples0.length > 0) { const s=validateSet(triples0[0]); if(s&&!s.isBomb){playCards(seat,triples0[0],s);return;} }
 const sorted0 = nats.slice().sort((a,b) => a.rank - b.rank);
 for (let i=0; i<=sorted0.length-5; i++) {
@@ -7462,6 +7620,22 @@ if (ps && !ps.isBomb) allCandidates.push({cards:cards.slice(0,2),set:ps,topRank:
 if (cards.length >= 3) {
 const ts = validateSet(cards.slice(0,3));
 if (ts && !ts.isBomb) allCandidates.push({cards:cards.slice(0,3),set:ts,topRank:cards[0].rank,isSingle:false});
+}
+// v264: 4+ cards of one rank that form a NON-bomb set (Normal Quad/Pentad/Sextad) are led as that one set,
+// instead of being split into pairs/triples — the biggest valid group sheds the most cards in one play.
+if (cards.length >= 4) {
+let bigSet = null, bigCards = null;
+for (let n = Math.min(cards.length, 6); n >= 4 && !bigSet; n--) {
+const ns = validateSet(cards.slice(0,n));
+if (ns && !ns.isBomb && /^Normal(Quad|Pentad|Sextad)$/.test(ns.type)) { bigSet = ns; bigCards = cards.slice(0,n); }
+}
+if (bigSet) {
+for (let i = allCandidates.length - 1; i >= 0; i--) {
+const ac = allCandidates[i];
+if (!ac.isSingle && ac.cards.length < bigCards.length && ac.cards[0].rank === bigCards[0].rank && (ac.set.type === 'Pair' || ac.set.type === 'Triple')) allCandidates.splice(i, 1);
+}
+allCandidates.push({cards:bigCards,set:bigSet,topRank:bigCards[0].rank,isSingle:false});
+}
 }
 }
 }
@@ -8224,7 +8398,7 @@ const nats = hand.filter(c => !c.isJoker);
 const freq = {};
 nats.forEach(c => { if (!freq[c.rank]) freq[c.rank]=[]; freq[c.rank].push(c); });
 const pairs = Object.values(freq).filter(g => g.length >= 2)
-.map(g => g.slice(0,2)).sort((a,b) => a[0].rank - b[0].rank);
+.map(g => bigSameRankLead(g,2)).sort((a,b) => a[0].rank - b[0].rank);
 if (pairs.length > 0) {
 const justSufficient = pairs.find(p => {
 const s = validateSet(p, currRank);
@@ -9033,6 +9207,7 @@ if (isLead && G.cosmosSeat === null) activate = true;
 break;
 case 'starma': {
 if (G.starDoubleOn) break;
+if (tOnlyScoring()) { if ((G.suitBonus||[]).some(sb => sb.seat === seat) || G.cosmosSeat === seat) activate = true; break; }
 const currRankStar = G.currentSet ? (G.currentSet.topRank||G.currentSet.rank||0) : 0;
 if (isLead) {
 const hasAce = hand.some(c => !c.isJoker && c.rank === 1);
@@ -10072,7 +10247,7 @@ if (inTrick && G.trickCards?.length > 0)
 hint = `Earn +5★ per ${card.ma.suit} card in this trick`;
 break;
 case 'starma':
-if (inTrick && !G.starDoubleOn && (G.trickCards||[]).some(t => t.card.isStar))
+if (inTrick && !G.starDoubleOn && (tOnlyScoring() ? ((G.suitBonus||[]).length > 0 || G.cosmosSeat !== null) : (G.trickCards||[]).some(t => t.card.isStar)))
 hint = 'Double all ★ Star VP this trick';
 break;
 case 'emergence':
@@ -10844,7 +11019,14 @@ else { render(); updateActions(); }
 function showEndScreen() {
 updateCrownRegistry();
 updateLeaderboard();
-const scores = allSeats().map(s=>({s,vp:G.totalVP[s]||0})).sort((a,b)=>b.vp-a.vp);
+let scores = allSeats().map(s=>({s,vp:G.totalVP[s]||0})).sort((a,b)=>b.vp-a.vp);
+if (tOnlyTeamTotals()) {
+// T Only: one shared score per team (partners' totals added); show the team's score on its first seat.
+const seen = new Set();
+scores = [];
+allSeats().forEach(s => { const tm = seatTeam(s,[s]); const key = tm.slice().sort().join(','); if (seen.has(key)) return; seen.add(key); scores.push({s, vp: tm.reduce((a,t)=>a+(G.totalVP[t]||0),0), team: tm}); });
+scores.sort((a,b)=>b.vp-a.vp);
+}
 const winner = scores[0].s;
 document.getElementById('end-title').innerHTML = `${SEAT_NAME_HTML(winner)} Wins!`;
 const el = document.getElementById('end-scores');
@@ -10852,7 +11034,7 @@ el.innerHTML='';
 scores.forEach(({s,vp})=>{
 const row = document.createElement('div');
 row.className='end-score-row'+(s===winner?' winner':'');
-row.innerHTML=`<span>${SEAT_NAME(s)}</span><span>${vp} pts</span>`;
+row.innerHTML=`<span>${tOnlyTeamTotals()?(seatTeam(s,[s]).map(SEAT_NAME).join(' & ')):SEAT_NAME(s)}</span><span>${vp} pts</span>`;
 el.appendChild(row);
 });
 document.getElementById('end-screen').classList.add('open');
@@ -10863,3 +11045,5 @@ renderSeatConfig();
 });</script>
 </body>
 </html>
+
+</body></html>
