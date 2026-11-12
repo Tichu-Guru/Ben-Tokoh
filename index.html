@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!-- © 2026 Ruben Zurita Ojeda. All rights reserved. -->
 <!-- BenTokoh — See BenTokoh_GDD.docx for full Game Design Document -->
 <html lang="en">
 <head>
@@ -131,10 +131,10 @@ body:has(#game-screen.active) #sound-toggle-btn{display:flex;}
 <!-- ══ START SCREEN ══ -->
 <div id="start-screen">
   <div class="start-logo">Ben Tokoh</div>
-  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v276</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text2);letter-spacing:0.08em;margin-top:-10px;margin-bottom:6px;">v284</div> <button id="dl-game-btn" style="display:none;margin:0 auto 8px;padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;">⬇ Download game (.html)</button>
 <script>
 (function(){
-const VER='276';
+const VER='284';
 (async function(){
 let dl=null;
 try{ dl = window.claude && await window.claude.use('downloads'); }catch(e){ dl=null; }
@@ -244,13 +244,21 @@ try{ await dl.save({filename:'BenTokoh_'+VER+'.html', data:html}); }catch(e){ if
 
   <div class="start-section">
     <div class="start-label">Deck</div>
-    <div class="toggle-row">
-      <button class="toggle-btn" id="dup-on-btn" onclick="setDuplicates(true)"
-        title="Adds duplicate ranks per suit: +2 Fives (rank 5), +2 Eights (rank 8), +1 Page (rank 11) — 20 cards/suit, 10+10 deal">
-        ✦ With Duplicates
-      </button>
-      <button class="toggle-btn active-ma" id="dup-off-btn" onclick="setDuplicates(false)">
+    <div class="toggle-row" id="deck-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="toggle-btn active-ma" id="dup-none-btn" onclick="setDuplicates('none')">
         Standard (15 cards/suit)
+      </button>
+      <button class="toggle-btn" id="dup-star-btn" onclick="setDuplicates('star')"
+        title="Adds per suit: +2 Aces, +2 Twos, +1 Nine — 20 cards/suit, 10+10 deal">
+        ✦ With ★ Duplicates
+      </button>
+      <button class="toggle-btn" id="dup-arrow-btn" onclick="setDuplicates('arrow')"
+        title="Adds per suit: +2 Fives, +2 Eights, +1 Page — 20 cards/suit, 10+10 deal">
+        ✦ With ▲ Duplicates
+      </button>
+      <button class="toggle-btn" id="dup-combo-btn" onclick="setDuplicates('combo')"
+        title="Adds one extra Ace, Two, Five, Eight and Nine per suit — 20 cards/suit, 10+10 deal">
+        ✦ Combo Duplicates
       </button>
     </div>
   </div>
@@ -305,6 +313,7 @@ try{ await dl.save({filename:'BenTokoh_'+VER+'.html', data:html}); }catch(e){ if
   </div>
 
   <button class="start-btn" id="begin-btn" onclick="primeAudioContext();startGame()">✦ Begin Game ✦</button>
+  <div style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:0.7rem;color:var(--text2);margin:10px 0 4px;">© 2026 Ruben Zurita Ojeda. All rights reserved.</div>
 </div>
 
 <div id="net-spectate-banner">👁 Spectating live — your controls arrive in Phase 2b</div>
@@ -599,6 +608,7 @@ const HELP_SECTIONS = [
 <p><b>Playing a trick:</b> the leader plays any legal set (a single card, a pair, a run, etc). Everyone after them must either play a <i>higher</i> set of the <b>same type and size</b>, or pass. The trick is won by whoever played the highest set; they lead the next trick.</p>
 <p><b>Selecting cards:</b> tap cards in your hand to select them, then tap Play. Tap Pass if you can't or don't want to beat the current play.</p>
 <p><b>Bombs</b> (four-of-a-kind or bigger, straight flushes, and other special combos) can be played out of turn to interrupt play. Only a stronger bomb beats a bomb: more cards always beats fewer, and at the same card count the order from weakest to strongest is same-rank bomb (four, five or six of a kind), straight flush, full house bomb, then running-group bomb (sequential pairs or triples in the same suits). The Non-Full House and 5+ Cards restrictions on the start screen can limit which bombs are allowed (the T Bombs option allows only a four-of-a-kind in four different suits and 5+ card straight flushes as bombs; T Only mode locks it on).</p>
+<p><b>Duplicates (Deck setting):</b> optional extra copies, 5 per suit (20 cards/suit, 10+10 deal), each marked with a D when it has no VP symbol of its own. <i>★ Duplicates</i> adds 2 Aces, 2 Twos and 1 Nine per suit; <i>▲ Duplicates</i> adds 2 Fives, 2 Eights and 1 Page; <i>Combo</i> adds one extra Ace, Two, Five, Eight and Nine. Extra copies carry the same VP as their rank. Duplicates also make repeated-suit same-rank sets and 6-card groups in Higher Full Houses possible.</p>
 <p><b>T Only (scoring option):</b> scores like Tokoh Only (Tokoh Points and declarations only) and limits play to classic climbing-game sets: singles, pairs, triples, runs of 2+ pairs, 3+2 full houses, and straights of 5+ cards. Bombs are locked to <i>T Bombs</i> (a four-of-a-kind in four different suits, or a 5+ card straight flush). The other toggles (Duplicates, Major Arcana, Straights, Teams) still apply. With 3 or 4 players, T Only also uses fixed teams (in 3 players the two-handed player is one team, the other two players the other). Major Arcana may be used; the team-forming Majors (Lovers, Hermit, Pan) are removed from the deck whenever teams are fixed. In T Only, ordinary Star cards score nothing, but the suit Majors and Cosmos still pay their ★ to the player who played them, and the Star Major doubles that ★ for the trick. If a team's partners go out first and second, the hand ends at once and each partner scores 200 TP with no other card points. Otherwise the hand ends when one player is left: that player's captured tricks go to the first player out and the remaining hand cards go to the opponents. Declarations are team scores: Grand Tokoh ±200, Tokoh ±100, Grand Cukong ±100, Cukong ±50, credited in full to each partner (a failed declaration costs each partner the full amount). Running totals are kept per player.</p>
 <p><b>Straights (setup option):</b> <i>High</i> (default) ranks a straight, sequential pairs/triples, and straight-flush / sequential-group bombs by their highest card. <i>Low</i> ranks them by their <b>lowest</b> card instead — the lower the bottom card, the stronger the set (Ace-low and Mulai-low runs are strongest). Lengths must still match to follow.</p>
 <p><b>Teams:</b> at setup you can choose Dynamic (teams may form or shift during play) or Fixed Teams (partnerships are locked to seat position for the whole game). This mainly matters if Major Arcana is on — see that section for how a few cards behave differently under Fixed Teams.</p>`},
@@ -616,14 +626,14 @@ const HELP_SECTIONS = [
 <li><b>★ Star VP:</b> yours alone, paid instantly to the player who <i>plays</i> the card: Ace +10; 2, 9, Page and Anjing +5 each.</li>
 <li><b>▲ Arrow VP:</b> shared with your whole team, but only if at least one of you goes out — built from cards your team actually captures in tricks.</li>
 <li><b>☢ Radioactive VP:</b> a penalty, yours alone, from cards you capture — 7 −5, 9 −5, Knight −10, Garuda −25 — charged only if you go out. Radioactive cards left in hands are not scored.</li>
-<li><b>Tokoh Points (TP):</b> from 4s, 10s and Queens — mostly individual, with a bonus pool for whoever goes out first. (Naga and Garuda score through Arrow and Radioactive VP, not TP — except in T Only, where the Naga is +25 TP and the Garuda −25 TP, and there is no Arrow or Radioactive VP.)</li>
+<li><b>Tokoh Points (TP):</b> from 4s, 10s and Queens — mostly individual, with a bonus pool for whoever goes out first. (Naga and Garuda score through Arrow and Radioactive VP, not TP — except in T Only, where the Naga is +25 TP and the Garuda −25 TP (charged to whoever captures it, whether or not they went out), and there is no Arrow or Radioactive VP.)</li>
 <li><b>Declaration VP:</b> the bonuses/penalties from Tokoh/Cukong declarations above.</li>
 </ul>
 <p>Solo players (in 3-player games) don't participate in Arrow or Radioactive VP at all — those are team-only pools.</p>`},
 { id:'jokers', title:'Jokers', open:false, html:`
 <p>Each suit contributes one special Joker:</p>
 <ul>
-<li><b>Naga:</b> played alone, it beats any non-bomb set of up to 6 cards (Single, Pair, Straight, anything — sets of 7+ cards are stronger than the Naga) and can lead a trick; only a bomb (or a 7+ card set it cannot beat) stops it. When a trick is won with the Naga, the Naga and every positive-VP card in the trick (2s, 5s, 8s, 4s, 10s, Queens) are gifted to the lowest-VP player (if you are already lowest you keep everything); you capture the rest. The gifted Arrow VP (Naga +25) counts only if someone on the receiver's team goes out; gifted TP scores to the receiver personally. Worth +25 Arrow VP.</li>
+<li><b>Naga:</b> played alone, it beats any single card (it cannot beat a Pair, Straight or any other multi-card set) and can lead a trick; only a bomb stops it. When a trick is won with the Naga, the Naga and every positive-VP card in the trick (2s, 5s, 8s, 4s, 10s, Queens) are gifted to the lowest-VP player (if you are already lowest you keep everything); you capture the rest. The gifted Arrow VP (Naga +25) counts only if someone on the receiver's team goes out; gifted TP scores to the receiver personally. Worth +25 Arrow VP.</li>
 <li><b>Garuda:</b> second only to the Naga in a trick, but worth −25 Radioactive VP when captured (charged only if you go out). It can also pair with any single natural card as a wildcard.</li>
 <li><b>Mulai:</b> always leads the very first trick of the hand, and can "wish" for a rank. While a wish is active, a player may not pass if any legal play using that rank exists (any legal bomb also satisfies this); the wish never forces a specific play.</li>
 <li><b>Anjing:</b> the weakest card — can only ever be led, never played in response to someone else. Playing it passes the lead to your teammate and scores +5 Star VP.</li>
@@ -826,7 +836,7 @@ d:'Mode 1 (on lead): Pass the lead to any player. Card consumed.\nMode 2: Lose 5
 {id:'Pan',      n:15, t:'PreDeal',     fx:'pan',       d:'PreDeal: Form Orange Team with any non-lead player. Target receives +25 VP. Activator auto-declares GT at 1.5× stakes (success +150 VP / failure −150 VP to whole Orange Team).'},
 ];
 let G = {};
-let CFG = { nPlayers:4, seats:[], useMA:false, useDuplicates:false, bombRestrictNonFullHouse:true, bombRestrict5Plus:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
+let CFG = { nPlayers:4, seats:[], useMA:false, useDuplicates:false, dupMode:'none', bombRestrictNonFullHouse:true, bombRestrict5Plus:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
 const shuffle = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
 const uid = () => Math.random().toString(36).slice(2,9);
 const allSeats = () => Array.from({length:G.nPlayers},(_,i)=>i);
@@ -900,31 +910,15 @@ return `${rn} of ${this.suit}`;
 };
 }
 function buildFixSuit(suit) {
-// With duplicates: 5s x3 (each +10▲, rank-5 arrow doubling), 8s x3 (each +5▲, arrow-type), Page x2 (dup retains +5★) = 20 cards/suit (incl. joker)
-// Ace, 2, 4, 9, Queen — not duplicated
+// v282 duplicate modes (extra copies per suit, each marked isDuplicate and carrying its rank's normal VP):
+//   star : +2 Aces, +2 2s, +1 9      arrow: +2 5s, +2 8s, +1 Page (11)      combo: +1 each of Ace, 2, 5, 8, 9
+// Every mode adds 5 cards per suit (20 cards/suit incl. joker). Queens (and 3, 4, 6, 7, 10, 12, 14) are never duplicated.
+const DUP_EXTRAS = { star:{1:2,2:2,9:1}, arrow:{5:2,8:2,11:1}, combo:{1:1,2:1,5:1,8:1,9:1} };
+const extras = (G.useDuplicates && DUP_EXTRAS[G.dupMode || 'arrow']) || {};
 const cards = [];
-if (G.useDuplicates) {
-cards.push(newCard(suit,1));  // Ace x1
-cards.push(newCard(suit,2));
-cards.push(newCard(suit,3));
-cards.push(newCard(suit,4)); // 4 x1 (+5TP)
-cards.push(newCard(suit,5)); // 5 x1 (no VP, first copy clean)
-const dup5a = newCard(suit,5); dup5a.isDuplicate = true; cards.push(dup5a);
-const dup5b = newCard(suit,5); dup5b.isDuplicate = true; cards.push(dup5b);
-cards.push(newCard(suit,6));
-cards.push(newCard(suit,7));
-cards.push(newCard(suit,8)); // 8 x1 (no VP, first copy clean)
-const dup8a = newCard(suit,8); dup8a.isDuplicate = true; cards.push(dup8a);
-const dup8b = newCard(suit,8); dup8b.isDuplicate = true; cards.push(dup8b);
-cards.push(newCard(suit,9));
-cards.push(newCard(suit,10));
-cards.push(newCard(suit,11)); // Page x1
-const dupPage = newCard(suit,11); dupPage.isDuplicate = true; cards.push(dupPage); // Page duplicate (retains ★ VP)
-cards.push(newCard(suit,12));
-cards.push(newCard(suit,13)); // Queen x1 (+10TP, no duplicate)
-cards.push(newCard(suit,14));
-} else {
-for (let r = 1; r <= 14; r++) cards.push(newCard(suit, r));
+for (let r = 1; r <= 14; r++) {
+cards.push(newCard(suit, r));
+for (let k = 0; k < (extras[r] || 0); k++) { const d = newCard(suit, r); d.isDuplicate = true; cards.push(d); }
 }
 cards.push(newCard(suit, 15));
 return cards;
@@ -1512,8 +1506,8 @@ if (cand.cards && !cand.cards.every(c=>!c.isMajorArcana&&c.rank>=0&&c.rank<=5)) 
 }
 if (cand.isBomb && !curr.isBomb) return true;
 if (!cand.isBomb && curr.isBomb) return false;
-// Naga (v243/v244): a lone Naga beats any non-bomb set of up to 6 cards, and nothing but a bomb beats it.
-if (cand.isNaga && !curr.isBomb) return !curr.isNaga && (curr.len || (curr.cards && curr.cards.length) || 1) <= 6; // v244: melds of 7+ cards are stronger than the Naga
+// Naga (v280): a lone Naga beats only a single card (not another Naga), and nothing but a bomb beats it.
+if (cand.isNaga && !curr.isBomb) return !curr.isNaga && (curr.len || (curr.cards && curr.cards.length) || 1) <= 1; // v280: melds of 2+ cards are out of the Naga's reach (was up to 6 cards in v243/v244)
 if (curr.isNaga && !cand.isBomb) return false;
 if (cand.isBomb && curr.isBomb) {
 const cLen = cand.len || cand.cards?.length || 0;
@@ -1644,7 +1638,7 @@ const jokers = (naga?1:0) + anjings + (cards.some(c=>c.role===ROLES.Garuda)?1:0)
 return jokers*2 + (naga?1:0);
 }
 function bidVP(cards) { return cards.reduce((s,c)=>s+Math.max(0,c.baseVP),0); }
-let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, bombRestrictNonFullHouse:true, bombRestrict5Plus:true, straightsLow:false, classicSets:false, tBombs:false, fixedTeams:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
+let startConfig = { nPlayers:4, useMA:false, useDuplicates:false, dupMode:'none', bombRestrictNonFullHouse:true, bombRestrict5Plus:true, straightsLow:false, classicSets:false, tBombs:false, fixedTeams:true, scoreMode:'bzf', diff:'medium', vpGoal:1000 };
 let seatTypes = [];
 
 /* ══════════ ONLINE MULTIPLAYER — PHASE 1 (Networking Foundation) ══════════ */
@@ -2567,10 +2561,10 @@ startConfig.straightsLow = !!low;
 document.getElementById('straights-high-btn').classList.toggle('active-ma', !low);
 document.getElementById('straights-low-btn').classList.toggle('active-ma', !!low);
 }
-function setDuplicates(val) {
-startConfig.useDuplicates = val;
-document.getElementById('dup-on-btn').classList.toggle('active-ma', val);
-document.getElementById('dup-off-btn').classList.toggle('active-ma', !val);
+function setDuplicates(mode) {
+if (mode === true) mode = 'arrow'; if (mode === false) mode = 'none';
+startConfig.dupMode = mode; startConfig.useDuplicates = mode !== 'none';
+['none','star','arrow','combo'].forEach(m => { const b = document.getElementById('dup-' + m + '-btn'); if (b) b.classList.toggle('active-ma', m === mode); });
 }
 function toggleBombRestrict(which) {
 if (startConfig.classicSets) return; // T Only locks the bomb row to T Bombs
@@ -2765,7 +2759,7 @@ nPlayers: n,
 seatNames: names,
 isHuman: types.map(t=>t==='human'),
 useMA: startConfig.useMA,
-useDuplicates: startConfig.useDuplicates,
+useDuplicates: startConfig.dupMode !== 'none', dupMode: startConfig.dupMode,
 bombRestrictNonFullHouse: startConfig.bombRestrictNonFullHouse,
 bombRestrict5Plus: startConfig.bombRestrict5Plus,
 straightsLow: !!startConfig.straightsLow,
@@ -6487,7 +6481,7 @@ G.tpVP[s] = (G.tpVP[s]||0) + tp;
 });
 // Garuda (Radioactive, 25) scores in every scoreMode, not just BZF.
 allSeats().forEach(s => {
-if (!G.outOrder.includes(s)) return;
+if (!tOnlyScoring() && !G.outOrder.includes(s)) return; // v278: in T Only the Garuda is charged to whoever captures it, out or not
 const garudaCount = (G.capturedCards[s]||[]).filter(c => c.role === ROLES.Garuda).length;
 if (garudaCount > 0) {
 const garudaPen = garudaCount * 25;
@@ -7036,8 +7030,9 @@ c.cards.forEach(card => {
 if (card.isJoker) return;
 rankCounts[card.rank] = (rankCounts[card.rank]||0) + 1;
 });
-const hasHighGroup = Object.entries(rankCounts).some(([rank, count]) => count >= 2 && Number(rank) >= 11);
+const hasHighGroup = (rankCounts[14] || 0) >= 1; // v279: 14s only (was any group of rank 11+)
 if (!hasHighGroup) return true;
+if (fh14Allowed(hand, c.cards)) return true;
 if (canGoOutWith(c)) return true;
 if (canGoOutNextLead(c)) return true;
 return false;
@@ -7722,6 +7717,24 @@ const fhs=validateSet(fhCards);
 if (fhs&&fhs.type==='FullHouse') allCandidates.push({cards:fhCards,set:fhs,topRank:Math.min(t[0].rank,p[0].rank),isSingle:false});
 }
 }
+// v277 (Hard AI): full houses completed by the Garuda — two pairs + Garuda, or a triple + a single + Garuda.
+// Only offered for rank combinations that have no natural full house in this hand.
+if (px && G.diff === 'hard') {
+const natKey = new Set(allCandidates.filter(c => c.set && c.set.type === 'FullHouse' && !c.cards.includes(px)).map(c => c.set.rank + ':' + c.topRank));
+const tryGFH = (cs, g1, g2) => {
+const gs = validateSet(cs);
+if (!gs || gs.type !== 'FullHouse' || !fh14Allowed(hand, cs)) return;
+const tr = Math.min(g1[0].rank, g2[0].rank);
+if (natKey.has(gs.rank + ':' + tr)) return;
+allCandidates.push({cards:cs,set:gs,topRank:tr,isSingle:false});
+};
+for (let i = 0; i < pairs2.length; i++) for (let j = i + 1; j < pairs2.length; j++)
+tryGFH([...pairs2[i].slice(0,2), ...pairs2[j].slice(0,2), px], pairs2[i], pairs2[j]);
+for (const t of triples2) for (const g of Object.values(freq)) {
+if (g[0].rank === t[0].rank || g.length !== 1) continue;
+tryGFH([...t.slice(0,3), g[0], px], t, g);
+}
+}
 const LOW = 11;
 const mjCard = hand.find(c => c.role === ROLES.Mulai);
 const mjCandidate = mjCard ? [{cards:[mjCard], set:validateSet([mjCard]), topRank:1, isSingle:true}].filter(c=>c.set) : [];
@@ -7995,7 +8008,7 @@ out.push({type:'SeqTriples', len: len*3, topRank: run[start+len-1]});
 return out;
 }
 function meldBeatableByHand(meld, otherHand) {
-if ((otherHand||[]).some(c => c.role === ROLES.Naga) && (meld.len || 1) <= 6) return true; // v244: a Naga beats any non-bomb meld of up to 6 cards
+if ((otherHand||[]).some(c => c.role === ROLES.Naga) && (meld.len || 1) <= 1) return true; // v280: a Naga beats only a single card
 return extractCandidateMelds(otherHand).some(c => c.type === meld.type && c.len === meld.len && setBeatsByRank(c, meld));
 }
 function isUnbeatableByOthers(meld, holderSeat) {
@@ -8257,6 +8270,13 @@ const cand = (w + n - i) % n;
 if (!G.outOrder.includes(cand) && cand !== w) { next = cand; break; }
 }
 return next === seat;
+}
+// v279: AI never puts a natural 14 into a full house unless that play uses its last cards or the cards left can go out in one play.
+function fh14Allowed(hand, cards) {
+if (!cards.some(c => !c.isJoker && !c.isMajorArcana && c.rank === 14)) return true;
+const remaining = hand.filter(x => !cards.find(y => y.id === x.id));
+if (remaining.length <= 1) return true;
+return !!validateSet(remaining);
 }
 function aiRespond(seat) {
 const hand = G.handA[seat];
@@ -8875,9 +8895,15 @@ for (const p of pairs) {
 if (p[0].rank === t[0].rank) continue;
 const fhCards = [...t.slice(0,3), ...p.slice(0,2)];
 const s = validateSet(fhCards, prevRank);
-if (s && canFollow(s, curr)) { bestResponse = {cards:fhCards,set:s}; break; }
+if (s && canFollow(s, curr) && fh14Allowed(hand, fhCards)) { bestResponse = {cards:fhCards,set:s}; break; }
 }
 if (bestResponse) break;
+}
+// v277 (Hard AI): no natural full house beats it — try one completed by the Garuda (two pairs + Garuda, or triple + single + Garuda).
+if (!bestResponse && px && diff === 'hard') {
+let gTry = (cs) => { let gs = validateSet(cs, prevRank); if (gs && gs.type === 'FullHouse' && canFollow(gs, curr) && fh14Allowed(hand, cs)) { if (!bestResponse || gs.rank < bestResponse.set.rank) bestResponse = {cards:cs,set:gs}; } };
+for (let i = 0; i < pairs.length; i++) for (let j = i + 1; j < pairs.length; j++) gTry([...pairs[i].slice(0,2), ...pairs[j].slice(0,2), px]);
+for (const t of triples) for (const g of Object.values(freq)) { if (g.length === 1 && g[0].rank !== t[0].rank) gTry([...t.slice(0,3), g[0], px]); }
 }
 } else if (currType === 'SeqDoubles' || currType === 'SeqTriples') {
 // Find smallest sequential meld that beats current set (same type, same length)
@@ -9739,7 +9765,7 @@ vpDisplay='★'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font
 vpDisplay='★▲\ufe0e'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
 } else if (!card.isJoker && card.rank === 9) {
 vpDisplay='★☢︎'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
-} else if (!card.isJoker && card.rank === 8 && card.isDuplicate) {
+} else if (!card.isJoker && (card.rank === 8 || card.rank === 5) && card.isDuplicate) {
 vpDisplay='▲\ufe0e'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-arrow);font-weight:700"';
 } else if (!card.isJoker && card.rank === 12) {
 vpDisplay='2☢︎'; vpStripStyle=' style="color:var(--red)"'; vpFaceStyle=' style="color:var(--vp-radioactive);font-weight:700"';
@@ -9747,7 +9773,7 @@ vpDisplay='2☢︎'; vpStripStyle=' style="color:var(--red)"'; vpFaceStyle=' sty
 vpDisplay='2▲\ufe0e'; vpStripStyle=' style="color:var(--red)"'; vpFaceStyle=' style="color:var(--vp-radioactive);font-weight:700"';
 } else if (!card.isJoker && card.rank === 11 && card.isDuplicate) {
 vpDisplay='★'; vpStripStyle=''; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
-} else if (!card.isJoker && card.isDuplicate) {
+} else if (!card.isJoker && card.isDuplicate && card.rank !== 1) {
 vpDisplay='D'; vpStripStyle=' style="opacity:0.6"'; vpFaceStyle=' style="opacity:0.5;color:var(--text2)"';
 } else if (!card.isJoker && card.rank === 1) {
 vpDisplay='2★'; vpStripStyle=' style="color:var(--blue)"'; vpFaceStyle=' style="color:var(--vp-star);font-weight:700"';
@@ -11042,8 +11068,8 @@ document.getElementById('end-screen').classList.add('open');
 window.addEventListener('load', ()=>{
 setPC(4, null);
 renderSeatConfig();
+// v284 start-screen defaults: T Only scoring, Easy AI, Standard deck, High straights, Fixed Teams
+try { setScore('tonly'); setDiff('easy'); setDuplicates('none'); setStraights(false); setFixedTeams(true); } catch (e) {}
 });</script>
 </body>
 </html>
-
-</body></html>
